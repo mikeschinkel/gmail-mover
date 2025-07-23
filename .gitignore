@@ -1,0 +1,43 @@
+# Sensitive authentication files - NEVER commit these
+credentials.json
+credentials/
+tokens/
+*.json.backup
+
+# Build artifacts
+gmail-mover
+gmail-mover.exe
+bin/
+dist/
+
+# Go build cache and modules
+go.sum
+vendor/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+transfer.log
+
+# Test artifacts
+coverage.out
+*.test
+
+# Temporary files
+*.tmp
+*.temp

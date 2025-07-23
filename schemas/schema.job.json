@@ -1,0 +1,95 @@
+{
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "title": "Gmail Mover Job Configuration",
+   "type": "object",
+   "required": ["name", "source", "destination"],
+   "properties": {
+      "name": {
+         "type": "string",
+         "description": "Human-readable name for this job"
+      },
+      "description": "Human-readable description for this job",
+      "source": {
+         "type": "object",
+         "required": ["email"],
+         "properties": {
+            "email": {
+               "type": "string",
+               "format": "email",
+               "description": "Source Gmail account"
+            },
+            "labels": {
+               "type": "array",
+               "items": {"type": "string"},
+               "description": "Gmail labels to process (e.g., ['INBOX', 'work/projects'])"
+            },
+            "query": {
+               "type": "string",
+               "description": "Gmail search query (e.g., 'from:amazon older_than:30d')"
+            },
+            "max_messages": {
+               "type": "integer",
+               "minimum": 1,
+               "description": "Maximum number of messages to process"
+            },
+            "date_filter": {
+               "type": "object",
+               "properties": {
+                  "before": {"type": "string", "format": "date"},
+                  "after": {"type": "string", "format": "date"}
+               }
+            }
+         }
+      },
+      "destination": {
+         "type": "object",
+         "required": ["email"],
+         "properties": {
+            "email": {
+               "type": "string",
+               "format": "email",
+               "description": "Destination Gmail account"
+            },
+            "apply_label": {
+               "type": "string",
+               "description": "Label to apply to moved messages"
+            },
+            "create_label_if_missing": {
+               "type": "boolean",
+               "description": "Create the apply_label if it doesn't exist",
+               "default": true
+            },
+            "preserve_labels": {
+               "type": "boolean",
+               "description": "Keep original labels on moved messages",
+               "default": false
+            }
+         }
+      },
+      "options": {
+         "type": "object",
+         "properties": {
+            "delete_after_move": {
+               "type": "boolean",
+               "description": "Delete messages from source after successful move",
+               "default": false
+            },
+            "dry_run": {
+               "type": "boolean",
+               "description": "Show what would be moved without actually moving",
+               "default": false
+            },
+            "continue_on_error": {
+               "type": "boolean",
+               "description": "Continue processing if individual messages fail",
+               "default": true
+            },
+            "log_level": {
+               "type": "string",
+               "enum": ["debug", "info", "warn", "error"]
+            }
+         }
+      }
+   }
+}
+

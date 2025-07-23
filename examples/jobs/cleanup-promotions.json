@@ -1,0 +1,20 @@
+{
+   "name": "Cleanup Promotions",
+   "description": "Move promotional emails to archive and delete from main",
+   "source": {
+      "email": "john.doe@gmail.com",
+      "labels": ["CATEGORY_PROMOTIONS"],
+      "query": "older_than:7d",
+      "max_messages": 1000
+   },
+   "destination": {
+      "email": "archive@mydomain.com",
+      "apply_label": "promotions/archived",
+      "create_label_if_missing": true
+   },
+   "options": {
+      "delete_after_move": true,
+      "dry_run": false,
+      "continue_on_error": true
+   }
+}

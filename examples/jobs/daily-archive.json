@@ -1,0 +1,21 @@
+{
+   "name": "Daily Archive Job",
+   "description": "Archive old emails from main inbox to archive account",
+   "source": {
+      "email": "john.doe@gmail.com",
+      "labels": ["INBOX"],
+      "query": "older_than:30d",
+      "max_messages": 500
+   },
+   "destination": {
+      "email": "archive@mydomain.com",
+      "apply_label": "archived-from-john",
+      "create_label_if_missing": true
+   },
+   "options": {
+      "delete_after_move": false,
+      "dry_run": false,
+      "log_level": "info"
+   }
+}
+
