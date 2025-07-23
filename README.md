@@ -5,7 +5,7 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
 ## Features
 
 - **Multi-Account Support**: Transfer messages between different Gmail accounts
-- **Advanced Filtering**: Use Gmail's powerful query syntax, labels, and date ranges
+- **Advanced Filtering**: Use Gmail's query syntax, labels, and date ranges
 - **Dry-Run Mode**: Preview what will be moved before making changes
 - **Label Management**: Apply labels to moved messages and list available labels
 - **Flexible Configuration**: Use command-line flags or JSON job files
