@@ -14,17 +14,68 @@ import (
 	"google.golang.org/api/option"
 )
 
-func GetGmailService(email string) (service *gmail.Service, err error) {
-	var config *oauth2.Config
-	var token *oauth2.Token
-	var client *http.Client
+const (
+	ConfigBaseDirName   = ".config"
+	CredentialsFileName = "credentials.json"
+	TokensDirName       = "tokens"
+	TokenFileTemplate   = "%s_token.json"
+)
 
-	config, err = loadCredentials()
+// getCredentialsPath returns the path to credentials file for this API instance
+func (api *GMailAPI) getCredentialsPath() (credentialsPath string, err error) {
+	var homeDir, configDir string
+
+	homeDir, err = os.UserHomeDir()
 	if err != nil {
 		goto end
 	}
 
-	token, err = getToken(config, email)
+	configDir = filepath.Join(homeDir, ConfigBaseDirName, api.appConfigDir)
+	err = os.MkdirAll(configDir, 0700) // Private directory
+	if err != nil {
+		goto end
+	}
+
+	credentialsPath = filepath.Join(configDir, CredentialsFileName)
+
+end:
+	return credentialsPath, err
+}
+
+// getTokenPath returns the path to token file for this API instance and email
+func (api *GMailAPI) getTokenPath(email string) (tokenPath string, err error) {
+	var homeDir, configDir, tokenDir string
+
+	homeDir, err = os.UserHomeDir()
+	if err != nil {
+		goto end
+	}
+
+	configDir = filepath.Join(homeDir, ConfigBaseDirName, api.appConfigDir)
+	tokenDir = filepath.Join(configDir, TokensDirName)
+	err = os.MkdirAll(tokenDir, 0700) // Private directory
+	if err != nil {
+		goto end
+	}
+
+	tokenPath = filepath.Join(tokenDir, fmt.Sprintf(TokenFileTemplate, email))
+
+end:
+	return tokenPath, err
+}
+
+// GetGmailService creates an authenticated Gmail service for the specified email
+func (api *GMailAPI) GetGmailService(email string) (service *gmail.Service, err error) {
+	var config *oauth2.Config
+	var token *oauth2.Token
+	var client *http.Client
+
+	config, err = api.loadCredentials()
+	if err != nil {
+		goto end
+	}
+
+	token, err = api.getToken(config, email)
 	if err != nil {
 		goto end
 	}
@@ -36,11 +87,18 @@ end:
 	return service, err
 }
 
-func loadCredentials() (config *oauth2.Config, err error) {
+func (api *GMailAPI) loadCredentials() (config *oauth2.Config, err error) {
 	var credentialsData []byte
+	var credentialsPath string
 
-	credentialsData, err = os.ReadFile("credentials.json")
+	credentialsPath, err = api.getCredentialsPath()
 	if err != nil {
+		goto end
+	}
+
+	credentialsData, err = os.ReadFile(credentialsPath)
+	if err != nil {
+		err = fmt.Errorf("credentials not found at %s: %w\nPlease download OAuth2 credentials from Google Cloud Console and save as credentials.json in ~/.config/gmail-mover/", credentialsPath, err)
 		goto end
 	}
 
@@ -50,10 +108,13 @@ end:
 	return config, err
 }
 
-func getToken(config *oauth2.Config, email string) (token *oauth2.Token, err error) {
+func (api *GMailAPI) getToken(config *oauth2.Config, email string) (token *oauth2.Token, err error) {
 	var tokenPath string
 
-	tokenPath = filepath.Join("tokens", fmt.Sprintf("%s_token.json", email))
+	tokenPath, err = api.getTokenPath(email)
+	if err != nil {
+		goto end
+	}
 
 	// Try to load existing token
 	token, err = loadTokenFromFile(tokenPath)
@@ -68,7 +129,7 @@ func getToken(config *oauth2.Config, email string) (token *oauth2.Token, err err
 	}
 
 	// Save token for future use
-	err = saveToken(tokenPath, token)
+	err = api.saveToken(email, token)
 
 end:
 	return token, err
@@ -94,6 +155,9 @@ func getTokenFromWeb(config *oauth2.Config) (token *oauth2.Token, err error) {
 	var authURL string
 	var authCode string
 
+	// Force out-of-band flow for CLI applications
+	config.RedirectURL = "urn:ietf:wg:oauth:2.0:oob"
+
 	authURL = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser: \n%v\n", authURL)
 	fmt.Print("Enter the authorization code: ")
@@ -109,8 +173,14 @@ end:
 	return token, err
 }
 
-func saveToken(tokenPath string, token *oauth2.Token) (err error) {
+func (api *GMailAPI) saveToken(email string, token *oauth2.Token) (err error) {
 	var f *os.File
+	var tokenPath string
+
+	tokenPath, err = api.getTokenPath(email)
+	if err != nil {
+		goto end
+	}
 
 	err = os.MkdirAll(filepath.Dir(tokenPath), 0755)
 	if err != nil {

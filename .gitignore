@@ -1,14 +1,8 @@
-# Sensitive authentication files - NEVER commit these
-credentials.json
-credentials/
-tokens/
-*.json.backup
 
 # Build artifacts
 gmail-mover
 gmail-mover.exe
 bin/
-dist/
 
 # Go build cache and modules
 go.sum
@@ -41,3 +35,4 @@ coverage.out
 # Temporary files
 *.tmp
 *.temp
+*.json.backup

@@ -1,6 +1,8 @@
 package gmutil
 
 import (
+	"time"
+
 	"google.golang.org/api/gmail/v1"
 )
 
@@ -23,12 +25,12 @@ type TransferOpts struct {
 }
 
 // TransferMessages handles the core message transfer logic
-func TransferMessages(srcEmail, dstEmail string) (err error) {
-	return TransferMessagesWithOpts(srcEmail, dstEmail, TransferOpts{})
+func (api *GMailAPI) TransferMessages(srcEmail, dstEmail string) (err error) {
+	return api.TransferMessagesWithOpts(srcEmail, dstEmail, TransferOpts{})
 }
 
 // TransferMessagesWithOpts handles the core message transfer logic
-func TransferMessagesWithOpts(srcEmail, dstEmail string, opts TransferOpts) (err error) {
+func (api *GMailAPI) TransferMessagesWithOpts(srcEmail, dstEmail string, opts TransferOpts) (err error) {
 	var messageCount int
 	var label string
 	var messages []*gmail.Message
@@ -37,12 +39,12 @@ func TransferMessagesWithOpts(srcEmail, dstEmail string, opts TransferOpts) (err
 
 	ensureLogger()
 
-	src, err = GetGmailService(srcEmail)
+	src, err = api.GetGmailService(srcEmail)
 	if err != nil {
 		goto end
 	}
 
-	dst, err = GetGmailService(dstEmail)
+	dst, err = api.GetGmailService(dstEmail)
 	if err != nil {
 		goto end
 	}
@@ -73,7 +75,7 @@ func TransferMessagesWithOpts(srcEmail, dstEmail string, opts TransferOpts) (err
 				goto end
 			}
 
-			err = transferMessage(src, dst, message, opts)
+			err = api.transferMessage(src, dst, message, opts)
 			if err != nil {
 				if !opts.FailOnError {
 					logger.Error("Error transferring message", "error", err)
@@ -92,12 +94,37 @@ end:
 }
 
 // transferMessage handles the transfer of a single message
-func transferMessage(src, dst *gmail.Service, msg *gmail.Message, opts TransferOpts) (err error) {
+func (api *GMailAPI) transferMessage(src, dst *gmail.Service, msg *gmail.Message, opts TransferOpts) (err error) {
 	var fullMessage *gmail.Message
 	var insertedMessage *gmail.Message
+	var messageInfo MessageInfo
+	var approved, approveAll bool
+
+	// Get message details for approval (always needed for logging)
+	messageInfo, err = api.getMessageInfo(src, msg)
+	if err != nil {
+		goto end
+	}
+
+	// Check approval if ApprovalFunc is set
+	if api.ApprovalFunc != nil {
+		approved, approveAll, err = api.ApprovalFunc(messageInfo)
+		if err != nil {
+			goto end
+		}
+		if !approved {
+			logger.Info("Message skipped by user", "subject", messageInfo.Subject, "id", msg.Id)
+			goto end
+		}
+		if approveAll {
+			// Disable further prompts
+			api.ApprovalFunc = nil
+			logger.Info("Auto-approving remaining messages")
+		}
+	}
 
 	if opts.DryRun {
-		logger.Info("DRY RUN: Would move message", "src_id", msg.Id)
+		logger.Info("DRY RUN: Would move message", "src_id", msg.Id, "subject", messageInfo.Subject)
 		goto end
 	}
 
@@ -136,4 +163,51 @@ func transferMessage(src, dst *gmail.Service, msg *gmail.Message, opts TransferO
 
 end:
 	return err
+}
+
+// getMessageInfo extracts message details for approval decisions
+func (api *GMailAPI) getMessageInfo(service *gmail.Service, msg *gmail.Message) (info MessageInfo, err error) {
+	var fullMessage *gmail.Message
+	var header *gmail.MessagePartHeader
+
+	// Get message with headers
+	fullMessage, err = service.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
+	if err != nil {
+		goto end
+	}
+
+	info.ID = msg.Id
+
+	// Extract headers
+	for _, header = range fullMessage.Payload.Headers {
+		switch header.Name {
+		case "Subject":
+			info.Subject = header.Value
+		case "From":
+			info.From = header.Value
+		case "To":
+			info.To = header.Value
+		case "Date":
+			// Parse RFC2822 date format
+			info.Date, _ = time.Parse(time.RFC1123Z, header.Value)
+			if info.Date.IsZero() {
+				// Try alternative format
+				info.Date, _ = time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", header.Value)
+			}
+		}
+	}
+
+	// Fallback values
+	if info.Subject == "" {
+		info.Subject = "(no subject)"
+	}
+	if info.From == "" {
+		info.From = "(unknown sender)"
+	}
+	if info.To == "" {
+		info.To = "(unknown recipient)"
+	}
+
+end:
+	return info, err
 }

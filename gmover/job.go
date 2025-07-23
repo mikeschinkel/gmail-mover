@@ -8,6 +8,10 @@ import (
 	"github.com/mikeschinkel/gmail-mover/gmutil"
 )
 
+const (
+	ConfigDirName = "gmail-mover"
+)
+
 // Job represents a complete job configuration for moving Gmail messages
 type Job struct {
 	Name        string     `json:"name"`
@@ -44,12 +48,18 @@ end:
 
 // Execute runs the job by moving messages from source to destination
 func (job *Job) Execute() (err error) {
+	return job.ExecuteWithApproval(nil)
+}
+
+// ExecuteWithApproval runs the job with an optional approval function
+func (job *Job) ExecuteWithApproval(approvalFunc gmutil.ApprovalFunc) (err error) {
 	var labelsToApply []string
-	
+	var api *gmutil.GMailAPI
+
 	if job.DstAccount.ApplyLabel != "" {
 		labelsToApply = []string{job.DstAccount.ApplyLabel}
 	}
-	
+
 	opts := gmutil.TransferOpts{
 		Labels:          job.SrcAccount.Labels,
 		SearchQuery:     job.SrcAccount.Query,
@@ -59,8 +69,10 @@ func (job *Job) Execute() (err error) {
 		LabelsToApply:   labelsToApply,
 		FailOnError:     !job.Options.FailOnError, // Note: inverted logic
 	}
-	
-	return gmutil.TransferMessagesWithOpts(job.SrcAccount.Email, job.DstAccount.Email, opts)
+
+	api = gmutil.NewGMailAPI(ConfigDirName)
+	api.ApprovalFunc = approvalFunc
+	return api.TransferMessagesWithOpts(job.SrcAccount.Email, job.DstAccount.Email, opts)
 }
 
 // LoadJob loads a job configuration from a JSON file

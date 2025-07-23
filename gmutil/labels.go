@@ -7,14 +7,14 @@ import (
 )
 
 // ListLabels lists all available labels for an email account
-func ListLabels(email string) (err error) {
+func (api *GMailAPI) ListLabels(email string) (err error) {
 	var service *gmail.Service
 	var labels []*gmail.Label
 	var label *gmail.Label
 
 	ensureLogger()
 
-	service, err = GetGmailService(email)
+	service, err = api.GetGmailService(email)
 	if err != nil {
 		goto end
 	}

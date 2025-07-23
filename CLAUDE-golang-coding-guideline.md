@@ -33,6 +33,7 @@ The Clear Path style prioritizes code readability and maintainability through mi
 - **Do NOT use `:=` after the first `goto end`**
 - **Do not shadow any variables**
 - **Leverage Go's zero values with return variables where possible**
+- **Do NOT declare variables for single-use struct literals intended to be passed as the last parameter to a func** - pass the struct literal directly to func instead of assigning to a variable first
 
 ### Function Signatures and Returns
 - **Use named return variables in the `func` signature for most functions**
@@ -174,6 +175,7 @@ end:
 5. **Compound expressions in control flow** - break them into separate statements
 6. **Variable shadowing** - use unique names throughout function scope
 7. **Missing trailing newline** - always end files with newline
+8. **Single-use struct variable assignment** - pass struct literals directly to functions
 
 ## Checklist for Code Review
 
@@ -190,6 +192,7 @@ Before submitting Golang code, verify:
 - [ ] Type comments start with type name
 - [ ] `any` used instead of `interface{}`
 - [ ] Functions are reasonable length (viewable without scrolling)
+- [ ] No single-use variables for struct literals when the values is intended to be passed as the last parameter to a func (pass directly to func instead.)
 
 ## Remember
 

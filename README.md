@@ -24,7 +24,8 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
 2. **Create OAuth2 Credentials**:
    - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
    - Choose "Desktop Application" type
-   - Download the credentials JSON file as `credentials.json`
+   - Download the credentials JSON file
+   - Save it as `~/.config/gmail-mover/credentials.json`
 
 3. **Install Gmail Mover**:
    ```bash
@@ -35,6 +36,11 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
    ```
 
 ### 2. Basic Usage
+
+**Get help (default behavior):**
+```bash
+./gmail-mover
+```
 
 **List available labels for an account:**
 ```bash
@@ -60,10 +66,21 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
 
 ## Command-Line Options
 
+### Modes
+Gmail Mover has three main modes of operation:
+
+| Mode | How to Activate | Description |
+|------|----------------|-------------|
+| **Help** | `./gmail-mover` (default) | Shows usage information and examples |
+| **List Labels** | `-list-labels -src=EMAIL` | Lists available labels for the specified account |
+| **Move Emails** | `-dst=EMAIL` or `-job=FILE` | Transfers emails between accounts |
+
+### Common Options
+
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-src` | Source Gmail address | *required* |
-| `-dst` | Destination Gmail address | *required* |  
+| `-src` | Source Gmail address | *required for most operations* |
+| `-dst` | Destination Gmail address | *required for moves* |  
 | `-src-label` | Source Gmail label to process | `INBOX` |
 | `-dst-label` | Label to apply to moved messages | *(none)* |
 | `-query` | Gmail search query | *(none)* |
@@ -71,7 +88,6 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
 | `-dry-run` | Preview mode - don't actually move | `false` |
 | `-delete` | Delete from source after move | `true` |
 | `-job` | Load settings from JSON job file | *(none)* |
-| `-list-labels` | List available labels for source account | `false` |
 
 ## Advanced Usage
 
@@ -132,11 +148,13 @@ On first use with each email account, you'll be prompted to:
 2. Grant permissions to Gmail Mover
 3. Copy the authorization code back to the terminal
 
-Tokens are saved in the `tokens/` directory for future use.
+Tokens are saved in `~/.config/gmail-mover/tokens/` for future use.
 
 ## Safety Features
 
-- **Dry-run by default**: Always test with `-dry-run` first
+- **Help by default**: Shows help information when run without arguments
+- **Explicit mode switching**: Must specify `-dst` or `-job` to enable move operations
+- **Dry-run support**: Always test with `-dry-run` first
 - **Authentication per account**: Each email requires separate OAuth approval
 - **Detailed logging**: See exactly what's happening during transfers
 - **Error handling**: Graceful handling of API limits and network issues
@@ -164,12 +182,13 @@ Tokens are saved in the `tokens/` directory for future use.
 ## Troubleshooting
 
 **"No credentials found" error:**
-- Ensure `credentials.json` is in the current directory
+- Ensure `credentials.json` is saved as `~/.config/gmail-mover/credentials.json`
 - Verify the file contains valid OAuth2 credentials from Google Cloud Console
+- The directory `~/.config/gmail-mover/` will be created automatically
 
 **"Authentication required" error:**
 - Run the command and follow the OAuth flow
-- Check that tokens are being saved in `tokens/` directory
+- Check that tokens are being saved in `~/.config/gmail-mover/tokens/` directory
 
 **Rate limiting:**
 - Gmail API has rate limits; the tool will handle retries automatically
@@ -181,8 +200,9 @@ Tokens are saved in the `tokens/` directory for future use.
 
 ## Security
 
-- OAuth2 tokens are stored locally in `tokens/` directory
-- No passwords or sensitive data are transmitted or stored
+- OAuth2 tokens are stored locally in `~/.config/gmail-mover/tokens/` directory
+- Credentials are stored in `~/.config/gmail-mover/credentials.json` (user config area)
+- No passwords or sensitive data are transmitted or stored in the project
 - Each account requires explicit authorization
 - Tokens can be revoked from your Google Account settings
 

@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
+**Status:** Active development - Core functionality implemented
+
 Gmail Mover is a Go CLI tool that transfers email messages between Gmail accounts using OAuth2 authentication and the Gmail API. It supports flexible job configuration, CLI flags, label filtering, Gmail queries, dry-run mode, and advanced message processing features.
 
 ## Architecture
@@ -23,32 +25,41 @@ The codebase follows a clean 3-package structure with unique, branded package na
 - **CLI-Friendly Logging**: Custom slog.Handler in cmd package for clean user output without timestamps
 - **Required Logger Pattern**: gmover and gmutil packages require logger setup with panic protection
 - **Job-Based Configuration**: Flexible job system supporting both CLI flags and JSON config files
-- **Email-Based Token Storage**: Tokens stored per email address in `tokens/` directory
+- **XDG-Compliant Storage**: Credentials and tokens stored in `~/.config/gmail-mover/`
+- **Email-Based Token Storage**: Tokens stored per email address in user config directory
 - **Single Credentials File**: Uses one `credentials.json` for all accounts
 - **Query Building**: Dynamic Gmail query construction with label, date, and custom filters
 - **Dry-Run Support**: Preview mode without actually moving messages
 - **Interactive Auth**: Copy-paste OAuth flow without callback servers
+- **Safe Default Behavior**: Defaults to ShowHelp mode instead of destructive operations
+- **Explicit Mode Switching**: Requires `-dst` or `-job` flags to enable move operations
+- **Configuration Validation**: Early validation of required fields before execution
 
 ## Development Commands
+
+**IMPORTANT: Always build executables to `./bin/` directory, never to project root!**
 
 ```bash
 # Install dependencies
 go mod tidy
 
-# Build binary
-go build -o gmail-mover ./cmd/
+# Build binary (ALWAYS build to ./bin/ directory)
+go build -o bin/gmail-mover ./cmd/
+
+# Show help (default behavior)
+./bin/gmail-mover
 
 # Run with CLI flags
-./gmail-mover -src=user@gmail.com -dst=archive@gmail.com -max=50 -dry-run
+./bin/gmail-mover -src=user@gmail.com -dst=archive@gmail.com -max=50 -dry-run
 
 # Run with job file
-./gmail-mover -job=config.json
+./bin/gmail-mover -job=config.json
 
 # List available labels for an account
-./gmail-mover -list-labels -src=user@gmail.com
+./bin/gmail-mover -list-labels -src=user@gmail.com
 
 # For debugging OAuth or API issues
-./gmail-mover -src=user@gmail.com -dst=archive@gmail.com -dry-run 2>&1 | tee transfer.log
+./bin/gmail-mover -src=user@gmail.com -dst=archive@gmail.com -dry-run 2>&1 | tee transfer.log
 
 # Run tests
 go test ./test/ -v
@@ -60,20 +71,30 @@ Before first run, you need:
 
 1. Google Cloud Console project with Gmail API enabled
 2. OAuth 2.0 Client ID (Desktop Application type)
-3. Downloaded credentials placed in: `credentials.json` (single file for all accounts)
+3. Downloaded credentials placed in: `~/.config/gmail-mover/credentials.json`
 
-Token files are auto-generated in `tokens/` directory using format `{email}_token.json` after first authorization for each email address.
+Token files are auto-generated in `~/.config/gmail-mover/tokens/` directory using format `{email}_token.json` after first authorization for each email address.
 
 ## CLI Usage Patterns
 
+### Show Help (Default)
+```bash
+./bin/gmail-mover
+```
+
+### List Labels
+```bash
+./bin/gmail-mover -list-labels -src=user@gmail.com
+```
+
 ### Basic Transfer
 ```bash
-./gmail-mover -src=user@gmail.com -dst=archive@gmail.com -max=100
+./bin/gmail-mover -src=user@gmail.com -dst=archive@gmail.com -max=100
 ```
 
 ### Advanced Filtering  
 ```bash
-./gmail-mover -src=user@gmail.com -dst=archive@gmail.com \
+./bin/gmail-mover -src=user@gmail.com -dst=archive@gmail.com \
   -src-label=INBOX -query="from:newsletter" -max=50 -dry-run
 ```
 
@@ -160,10 +181,16 @@ gmutil.SetLogger(logger)
 ```
 
 #### Job Execution Flow
-1. Parse CLI flags using standard flag package
-2. Create config with gmover.NewConfig() and set values via setters
-3. Pass config pointer to gmover.Run(&config)
-4. Job creation and execution handled internally
+1. Parse CLI flags using standard flag package  
+2. Create config with gmover.NewConfig(gmover.ShowHelp) (default mode)
+3. Determine run mode based on flags:
+   - `-list-labels` → ListLabels mode
+   - `-job FILE` → MoveEmails mode  
+   - `-dst EMAIL` → MoveEmails mode
+   - No special flags → ShowHelp mode (default)
+4. Set config values via setters and pass config pointer to gmover.Run(&config)
+5. Configuration validation occurs before execution
+6. Job creation and execution handled internally based on mode
 
 #### Error Handling
 - Clear Path style with single exit point via `goto end`
@@ -173,6 +200,9 @@ gmutil.SetLogger(logger)
 
 ## Implemented Features
 
+- **Three Operation Modes**: ShowHelp (default), ListLabels, and MoveEmails
+- **Safe Default Behavior**: Help mode prevents accidental destructive operations
+- **Configuration Validation**: Early validation with helpful error messages  
 - **CLI Flags**: Full support for source/dest emails, labels, queries, limits
 - **Job Configuration**: JSON-based job files for complex configurations
 - **Filtering**: Label-based, Gmail query syntax, date range filtering
@@ -207,6 +237,12 @@ This codebase follows Clear Path style guidelines:
 - **Constructor functions** for all types (New*() pattern)
 - **No `else` statements** - use helper functions or `goto end` instead
 
+## Build Standards
+
+- **ALWAYS build executables to `./bin/` directory**: `go build -o bin/gmail-mover ./cmd/`
+- **NEVER build to project root** - keeps the root directory clean
+- **Use `./bin/gmail-mover` for all testing and examples**
+
 ## Testing Notes
 
 Integration tests exist in `test/` directory:
@@ -233,8 +269,29 @@ When adding tests, ensure they follow Clear Path style and call `setupTestLogger
 ### Medium Priority
 - [ ] Add comprehensive integration tests for gmover/gmutil interaction
 
+### Implementation Details
+
+#### applyLabels Function (gmutil/labels.go:50)
+The `applyLabels` function currently contains `panic("IMPLEMENT ME")` and needs proper implementation:
+
+**Requirements:**
+1. Check if the specified label exists in the destination Gmail account
+2. Create the label if it doesn't exist (based on job config `CreateLabelIfMissing` flag)
+3. Apply the label(s) to the specified message using Gmail API
+4. Handle errors gracefully (don't panic on missing labels if creation is disabled)
+
+**Gmail API Reference:**
+- `service.Users.Labels.List()` - to check existing labels
+- `service.Users.Labels.Create()` - to create new labels if needed  
+- `service.Users.Messages.Modify()` - to apply labels to messages
+
+**Current Usage:**
+Called from `gmutil/transfer.go:119` during message transfer when `opts.LabelsToApply` is not empty.
+
+**Error Handling:**
+Should follow Clear Path style with `goto end` pattern and return meaningful errors for debugging.
+
 ### Low Priority / Future
-- [ ] Implement applyLabels function in gmutil/labels.go (currently just prints)
 - [ ] Consider making MaxMessages part of TransferOpts instead of global variable
 - SQLite logging for deduplication
 - Label creation if missing
