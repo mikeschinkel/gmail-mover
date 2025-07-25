@@ -13,14 +13,8 @@ var commands = make([]Command, 0)
 var commandsTypeMap = make(map[reflect.Type]Command)
 var commandsPathMap = make(map[string]Command)
 
-// Command interface that all commands must implement
+// Command interface for basic command metadata and delegation
 type Command interface {
-	baseCommand
-	Handle(context.Context, Config, []string) error
-}
-
-// Command interface that all commands must implement
-type baseCommand interface {
 	Name() string
 	FullNames() []string
 	Usage() string
@@ -31,6 +25,13 @@ type baseCommand interface {
 	ParentTypes() []reflect.Type
 	FlagSets() []*FlagSet
 	ParseFlagSets([]string, Config) ([]string, error)
+	AssignArgs([]string, Config) error
+}
+
+// CommandHandler interface for commands that actually execute logic
+type CommandHandler interface {
+	Command
+	Handle(context.Context, Config, []string) error
 }
 
 func Initialize() (err error) {
@@ -102,9 +103,9 @@ type NULL = struct{}
 func ValidateCommands() (err error) {
 	var errs []error
 	flagSets := make(map[*FlagSet]struct{}, 0)
-	fdNames := make(map[string]struct{}, 0)
 	for _, cmd := range commands {
 		for _, fs := range cmd.FlagSets() {
+			fdNames := make(map[string]struct{}, 0)
 			_, ok := flagSets[fs]
 			if ok {
 				// We've already processed it, don't need to process again
@@ -132,6 +133,8 @@ func GetExactCommand(path string) Command {
 // GetDefaultCommand retrieves a command or its default at any depth using dot notation
 func GetDefaultCommand(path string, args []string) (cmd Command) {
 	var defaultCmd Command
+	var delegateType reflect.Type
+	var exists bool
 
 	cmd = GetExactCommand(path)
 	if cmd == nil {
@@ -155,9 +158,13 @@ func GetDefaultCommand(path string, args []string) (cmd Command) {
 
 	// Delegate to default subcommand
 	// CLAUDE: Will this work for > 1 level of sub command?
-	defaultCmd = GetExactCommand(path + "." + cmd.DelegateTo().Name())
-	if defaultCmd != nil {
-		cmd = defaultCmd
+	if cmd.DelegateTo() != nil {
+		// Look up delegate by type
+		delegateType = reflect.TypeOf(cmd.DelegateTo()).Elem()
+		defaultCmd, exists = commandsTypeMap[delegateType]
+		if exists {
+			cmd = defaultCmd
+		}
 	}
 
 end:

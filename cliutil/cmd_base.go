@@ -17,7 +17,7 @@ const (
 	Int64Flag
 )
 
-var _ baseCommand = (*CmdBase)(nil)
+var _ Command = (*CmdBase)(nil)
 
 // CmdBase provides common functionality for all commands
 // It implements the cliutil.Cmd interface
@@ -27,6 +27,7 @@ type CmdBase struct {
 	description string
 	flagsDefs   []FlagDef  // Legacy flag definitions (will be deprecated)
 	flagSets    []*FlagSet // New FlagSet-based approach
+	argDefs     []*ArgDef  // Positional argument definitions
 	delegateTo  Command
 	parentTypes []reflect.Type
 	subCommands []Command
@@ -51,6 +52,7 @@ type CmdArgs struct {
 	DelegateTo  Command
 	FlagDefs    []FlagDef  // Legacy flag definitions (will be deprecated)
 	FlagSets    []*FlagSet // New FlagSet-based approach
+	ArgDefs     []*ArgDef  // Positional argument definitions
 }
 
 // NewCmdBase creates a new command base
@@ -61,6 +63,7 @@ func NewCmdBase(args CmdArgs) *CmdBase {
 		description: args.Description,
 		flagsDefs:   args.FlagDefs,
 		flagSets:    args.FlagSets, // Static FlagSets (legacy)
+		argDefs:     args.ArgDefs,  // Positional argument definitions
 		delegateTo:  args.DelegateTo,
 		parentTypes: make([]reflect.Type, 0),
 		subCommands: make([]Command, 0),
@@ -134,9 +137,14 @@ func (c *CmdBase) AddSubCommand(cmd Command) {
 	c.subCommands = append(c.subCommands, cmd)
 }
 
-// DelegateTo returns the command to delete to, if any
+// DelegateTo returns the command to delegate to, if any
 func (c *CmdBase) DelegateTo() Command {
 	return c.delegateTo
+}
+
+// SetDelegateTo sets the command to delegate to
+func (c *CmdBase) SetDelegateTo(cmd Command) {
+	c.delegateTo = cmd
 }
 
 // ParseFlagSets parses flags using the new FlagSet-based approach
@@ -149,11 +157,9 @@ func (c *CmdBase) ParseFlagSets(args []string, _ Config) (remainingArgs []string
 		nonFSArgs, err = flagSet.Parse(nonFSArgs)
 		errs = append(errs, err)
 	}
+
 	err = errors.Join(errs...)
-
-	// TODO: Add validation for required flags
-
-	return remainingArgs, err
+	return nonFSArgs, err
 }
 
 // validateFlags ensures all required flags are provided
@@ -184,4 +190,43 @@ func (c *CmdBase) validateFlags(values map[string]any) (err error) {
 
 end:
 	return errors.Join(errs...)
+}
+
+// AssignArgs assigns positional arguments to their defined config fields
+func (c *CmdBase) AssignArgs(args []string, config Config) (err error) {
+	var errs []error
+
+	// Check if we have enough arguments for required ones
+	requiredCount := 0
+	for _, argDef := range c.argDefs {
+		if argDef.Required {
+			requiredCount++
+		}
+	}
+
+	if len(args) < requiredCount {
+		err = fmt.Errorf("expected at least %d arguments, got %d", requiredCount, len(args))
+		goto end
+	}
+
+	// Assign available arguments
+	for i, argDef := range c.argDefs {
+		if i >= len(args) {
+			if argDef.Required {
+				errs = append(errs, fmt.Errorf("required argument '%s' missing", argDef.Name))
+			}
+			continue
+		}
+
+		if argDef.String != nil {
+			*argDef.String = args[i]
+		}
+	}
+
+	if len(errs) > 0 {
+		err = errors.Join(errs...)
+	}
+
+end:
+	return err
 }

@@ -1,7 +1,12 @@
 package gmcmds
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/mikeschinkel/gmail-mover/cliutil"
+	"github.com/mikeschinkel/gmail-mover/gmjobs"
+	"github.com/mikeschinkel/gmail-mover/gmover"
 )
 
 // Singleton instance for CLI command configuration
@@ -42,10 +47,82 @@ type Config struct {
 	AutoConfirm     *bool
 }
 
-func (c *Config) SetValues(values map[string]any) {
-	noop(values)
-	//TODO implement me
-	panic("implement me")
+func (c *Config) Config() {}
+
+// GMoverConfig converts the gmcmds.Config to a gmover.Config with domain types
+func (c *Config) GMoverConfig() (*gmover.Config, error) {
+	var config *gmover.Config
+	var errs []error
+	var err error
+
+	config = gmover.NewConfig()
+
+	// Parse all fields, appending any errors (errors.Join filters out nils)
+	if c.JobFile != nil && *c.JobFile != "" {
+		config.JobFile, err = gmjobs.ParseJobFile(*c.JobFile)
+		errs = append(errs, err)
+	}
+
+	if c.SrcEmail != nil && *c.SrcEmail != "" {
+		config.SrcEmail, err = gmover.ParseEmailAddress(*c.SrcEmail)
+		errs = append(errs, err)
+	}
+
+	if c.DstEmail != nil && *c.DstEmail != "" {
+		config.DstEmail, err = gmover.ParseEmailAddress(*c.DstEmail)
+		errs = append(errs, err)
+	}
+
+	if c.SrcLabel != nil && *c.SrcLabel != "" {
+		var srcLabel gmover.LabelName
+		srcLabel, err = gmover.ParseLabelName(*c.SrcLabel)
+		config.SrcLabels = []gmover.LabelName{srcLabel}
+		errs = append(errs, err)
+	}
+
+	if c.DstLabel != nil && *c.DstLabel != "" {
+		config.DstLabel, err = gmover.ParseLabelName(*c.DstLabel)
+		errs = append(errs, err)
+	}
+
+	if c.Search != nil {
+		config.SearchQuery, err = gmover.ParseSearchQuery(*c.Search)
+		errs = append(errs, err)
+	}
+
+	if c.MaxMessages != nil {
+		config.MaxMessages, err = gmover.ParseMaxMessages(*c.MaxMessages)
+		errs = append(errs, err)
+	}
+
+	// Set boolean flags
+	if c.DryRun != nil {
+		config.DryRun = *c.DryRun
+	}
+	if c.DeleteAfterMove != nil {
+		config.DeleteAfterMove = *c.DeleteAfterMove
+	}
+	if c.AutoConfirm != nil {
+		config.AutoConfirm = *c.AutoConfirm
+	}
+
+	// If there were errors, return nil config and joined error
+	err = errors.Join(errs...)
+	if err != nil {
+		config = nil
+	}
+
+	return config, err
 }
 
-func (c *Config) Config() {}
+// ConvertConfig converts a cliutil.Config to a gmover.Config
+func ConvertConfig(config cliutil.Config) (gmc *gmover.Config, err error) {
+	cfg, ok := config.(*Config)
+	if !ok {
+		err = fmt.Errorf("invalid config type")
+		goto end
+	}
+	gmc, err = cfg.GMoverConfig()
+end:
+	return gmc, err
+}

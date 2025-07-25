@@ -4,7 +4,7 @@ package gmover
 type JobOptions struct {
 	Name            string
 	SrcEmail        string
-	SrcLabel        string
+	SrcLabels       []string
 	DstEmail        string
 	DstLabel        string
 	MaxMessages     int64

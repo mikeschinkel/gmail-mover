@@ -4,5 +4,4 @@ package cliutil
 
 type Config interface {
 	Config()
-	SetValues(map[string]any)
 }

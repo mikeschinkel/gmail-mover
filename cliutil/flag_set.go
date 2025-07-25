@@ -27,21 +27,7 @@ func (fs *FlagSet) Parse(args []string) (remainingArgs []string, err error) {
 
 	// Parse only the flags, collect non-flag arguments
 	fsFlagNames = fs.FlagNames()
-
-	for _, arg := range args {
-		if !strings.HasPrefix(arg, "-") {
-			// This is a non-flag argument (command name or command arg)
-			nonFSArgs = append(nonFSArgs, arg)
-			continue
-		}
-		if !slices.Contains(fsFlagNames, strings.TrimPrefix(arg, "-")) {
-			// This is some other flag, leave it for command parsing
-			nonFSArgs = append(nonFSArgs, arg)
-			continue
-		}
-		// This is not a flagSet flag, add it to a temp slice for parsing
-		fsArgs = append(fsArgs, arg)
-	}
+	fsArgs, nonFSArgs = fs.classifyFlagArgs(args, fsFlagNames)
 
 	if len(fsArgs) == 0 {
 		goto end
@@ -54,6 +40,11 @@ func (fs *FlagSet) Parse(args []string) (remainingArgs []string, err error) {
 
 	// Parse the global flags we found
 	err = fs.FlagSet.Parse(fsArgs)
+	if err != nil {
+		goto end
+	}
+
+	err = fs.Validate()
 	if err != nil {
 		goto end
 	}
@@ -113,33 +104,87 @@ func (fs *FlagSet) FlagNames() (names []string) {
 	return names
 }
 
-// ParseAndBind parses flags and automatically binds values to config
-func (fs *FlagSet) ParseAndBind(args []string, _ Config) (_ []string, err error) {
+// Validate validates all flag values using their defined validation rules
+func (fs *FlagSet) Validate() (err error) {
 	var errs []error
+	var value any
 
-	err = fs.FlagSet.Parse(args)
-	if err != nil {
-		goto end
-	}
 	for _, flagDef := range fs.FlagDefs {
-		switch {
-		case flagDef.Bool != nil:
-			*flagDef.Bool = true // CLAUDE: <== how to get the value?
-		case flagDef.String != nil:
-			*flagDef.String = "" // CLAUDE: <== how to get the value?
-		case flagDef.Int64 != nil:
-			*flagDef.Int64 = 9 // CLAUDE: <== how to get the value?
+		switch flagDef.Type() {
+		case StringFlag:
+			stringPtr := fs.Values[flagDef.Name].(*string)
+			value = *stringPtr
+		case BoolFlag:
+			boolPtr := fs.Values[flagDef.Name].(*bool)
+			value = *boolPtr
+		case Int64Flag:
+			int64Ptr := fs.Values[flagDef.Name].(*int64)
+			value = *int64Ptr
 		default:
-			errs = append(errs, fmt.Errorf("unknown flag type: %s", flagDef.Type))
+			errs = append(errs, fmt.Errorf("unknown flag type for %s", flagDef.Name))
+			continue
 		}
+
+		// Validate the value
+		errs = append(errs, flagDef.ValidateValue(value))
 	}
+
 	if len(errs) > 0 {
 		err = errors.Join(errs...)
-		goto end
 	}
-	args = fs.FlagSet.Args()
-end:
-	return args, err
+	return err
+}
+
+// classifyFlagArgs separates arguments into flag args and non-flag args
+func (fs *FlagSet) classifyFlagArgs(args []string, fsFlagNames []string) (fsArgs []string, nonFSArgs []string) {
+	var i int
+
+	for i < len(args) {
+		arg := args[i]
+
+		// Non-flag argument
+		if !strings.HasPrefix(arg, "-") {
+			nonFSArgs = append(nonFSArgs, arg)
+			i++
+			continue
+		}
+
+		// Extract flag name (handle both -flag and --flag)
+		flagName := strings.TrimPrefix(arg, "-")
+		flagName = strings.TrimPrefix(flagName, "-")
+
+		// Check for flag=value format
+		if equalPos := strings.Index(flagName, "="); equalPos != -1 {
+			flagName = flagName[:equalPos]
+		}
+
+		// Check if this flag belongs to this FlagSet
+		if !slices.Contains(fsFlagNames, flagName) {
+			// This flag doesn't belong to us, skip it and its value
+			nonFSArgs = append(nonFSArgs, arg)
+			i++
+			continue
+		}
+
+		// This is our flag
+		fsArgs = append(fsArgs, arg)
+
+		// If flag=value format, we're done with this argument
+		if strings.Contains(arg, "=") {
+			i++
+			continue
+		}
+
+		// Check if next argument is the flag value (not another flag)
+		if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+			fsArgs = append(fsArgs, args[i+1])
+			i += 2 // Skip both flag and value
+		} else {
+			i++ // Just the flag (boolean flag)
+		}
+	}
+
+	return fsArgs, nonFSArgs
 }
 
 func (fs *FlagSet) Assign() (err error) {

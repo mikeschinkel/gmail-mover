@@ -36,6 +36,8 @@ func (cr CmdRunner) Run(ctx context.Context) (err error) {
 	var cmd Command
 	var cmdPath string
 	var args []string
+	var handler CommandHandler
+	var ok bool
 
 	// Validate commands first
 	err = ValidateCmds()
@@ -71,7 +73,20 @@ func (cr CmdRunner) Run(ctx context.Context) (err error) {
 	if err != nil {
 		goto end
 	}
-	err = cmd.Handle(ctx, cr.config, args)
+
+	err = cmd.AssignArgs(args, cr.config)
+	if err != nil {
+		goto end
+	}
+
+	// Command resolution should ensure we only get CommandHandler implementations
+	handler, ok = cmd.(CommandHandler)
+	if !ok {
+		err = fmt.Errorf("command '%s' does not implement handler logic", cmd.Name())
+		goto end
+	}
+
+	err = handler.Handle(ctx, cr.config, args)
 
 end:
 	return err

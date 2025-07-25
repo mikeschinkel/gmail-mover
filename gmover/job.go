@@ -1,6 +1,7 @@
 package gmover
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -32,7 +33,7 @@ func NewJob(opts JobOptions) (job *Job, err error) {
 		Name:    opts.Name,
 		Options: NewJobOptions(opts),
 		SrcAccount: NewSrcAccount(opts.SrcEmail, SrcAccountOpts{
-			Labels:      []string{opts.SrcLabel},
+			Labels:      opts.SrcLabels,
 			Query:       opts.SearchQuery,
 			MaxMessages: opts.MaxMessages,
 		}),
@@ -53,6 +54,11 @@ func (job *Job) Execute() (err error) {
 
 // ExecuteWithApproval runs the job with an optional approval function
 func (job *Job) ExecuteWithApproval(approvalFunc gapi.ApprovalFunc) (err error) {
+	return job.ExecuteWithApprovalAndContext(context.Background(), approvalFunc)
+}
+
+// ExecuteWithApprovalAndContext runs the job with context and optional approval function
+func (job *Job) ExecuteWithApprovalAndContext(ctx context.Context, approvalFunc gapi.ApprovalFunc) (err error) {
 	var labelsToApply []string
 	var api *gapi.GMailAPI
 
@@ -74,6 +80,8 @@ func (job *Job) ExecuteWithApproval(approvalFunc gapi.ApprovalFunc) (err error) 
 	// CLAUDE: I am wondering if approveFunc should be in api or opts?
 	//         Argue pros and cons of each then let me decide.
 	api.ApprovalFunc = approvalFunc
+	// TODO: Create TransferMessagesWithOptsAndContext that accepts context
+	noop(ctx) // Context will be used when gapi supports it
 	return api.TransferMessagesWithOpts(job.SrcAccount.Email, job.DstAccount.Email, opts)
 }
 
@@ -110,26 +118,33 @@ end:
 func GetJob(config Config) (job *Job, err error) {
 
 	// Load job configuration
-	if config.JobFile() != "" {
-		job, err = LoadJob(config.JobFile())
+	if !config.JobFile.IsZero() {
+		job, err = LoadJob(string(config.JobFile))
 		goto end
 	}
 
-	// TODO: This is AI generated code smell; disinfect it
 	job, err = NewJob(JobOptions{
 		Name:            "CLI Job",
-		SrcEmail:        config.SrcEmail(),
-		SrcLabel:        config.SrcLabel(),
-		DstEmail:        config.DstEmail(),
-		DstLabel:        config.DstLabel(),
-		MaxMessages:     config.MaxMessages(),
-		DryRun:          config.DryRun(),
-		DeleteAfterMove: config.DeleteAfterMove(),
-		SearchQuery:     config.SearchQuery(),
+		SrcEmail:        string(config.SrcEmail),
+		SrcLabels:       stringSlice(config.SrcLabels),
+		DstEmail:        string(config.DstEmail),
+		DstLabel:        string(config.DstLabel),
+		MaxMessages:     int64(config.MaxMessages),
+		DryRun:          config.DryRun,
+		DeleteAfterMove: config.DeleteAfterMove,
+		SearchQuery:     string(config.SearchQuery),
 		FailOnError:     false,
 		LogLevel:        "info",
 	})
 
 end:
 	return job, err
+}
+
+func stringSlice[T ~string](tt []T) []string {
+	ss := make([]string, len(tt))
+	for i, t := range tt {
+		ss[i] = string(t)
+	}
+	return ss
 }

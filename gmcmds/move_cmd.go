@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/mikeschinkel/gmail-mover/cliutil"
+	"github.com/mikeschinkel/gmail-mover/gmover"
 )
 
 var MoveEmailFlagSet = &cliutil.FlagSet{
@@ -37,10 +38,20 @@ func init() {
 	})
 }
 
+// MoveCmd implements CommandHandler (executes logic)
+var _ cliutil.CommandHandler = (*MoveCmd)(nil)
+
 // Handle executes the move command
-func (c *MoveCmd) Handle(ctx context.Context, config cliutil.Config, args []string) (err error) {
-	noop(ctx, config, args)
-	// TODO: Need to implement move logic without directly importing gmover
-	// This will require refactoring the business logic to accept config as parameter
-	return nil
+func (c *MoveCmd) Handle(ctx context.Context, config cliutil.Config, _ []string) (err error) {
+	var gmCfg *gmover.Config
+
+	gmCfg, err = ConvertConfig(config)
+	if err != nil {
+		goto end
+	}
+
+	err = gmover.MoveEmails(ctx, gmCfg)
+
+end:
+	return err
 }
