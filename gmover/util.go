@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-func fprintf(w io.Writer, format string, a ...interface{}) {
+func fprintf(w io.Writer, format string, a ...any) {
 	_, err := fmt.Fprintf(w, format, a...)
 	if err != nil {
 		logger.Error("Error attempting to output to writer",
@@ -25,3 +25,6 @@ func deRef[T any](ptr *T) (v T) {
 func toPtr[T any](v T) *T {
 	return &v
 }
+
+//goland:noinspection GoUnusedParameter
+func noop(...any) {}

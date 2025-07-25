@@ -1,4 +1,4 @@
-package gmutil
+package gapi
 
 import (
 	"time"
@@ -8,6 +8,7 @@ import (
 
 var maxMessages = 10000
 
+//goland:noinspection GoUnusedExportedFunction
 func SetMaxMessages(max int) {
 	maxMessages = max
 }

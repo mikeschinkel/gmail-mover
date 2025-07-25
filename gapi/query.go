@@ -1,4 +1,4 @@
-package gmutil
+package gapi
 
 import (
 	"fmt"

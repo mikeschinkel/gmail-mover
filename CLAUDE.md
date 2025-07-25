@@ -14,16 +14,16 @@ The codebase follows a clean 3-package structure with unique, branded package na
 
 - **cmd package**: CLI entry point with flag parsing, CLI-friendly slog logger, and application orchestration
 - **gmover package**: Core business logic, job management, configuration handling with private fields and getter/setter methods
-- **gmutil package**: Gmail API operations including authentication, message transfer, label management, and query building
+- **gapi package**: Gmail API operations including authentication, message transfer, label management, and query building
 
 ### Key Design Patterns
 
 - **Clear Path Style**: All functions use `goto end` with single exit point, named return variables
-- **Unique Package Naming**: Follows branded naming (gmover, gmutil) to avoid ecosystem conflicts
+- **Unique Package Naming**: Follows branded naming (gmover, gapi) to avoid ecosystem conflicts
 - **Constructor Pattern**: All types have New*() constructors with proper defaults
 - **Encapsulated Configuration**: Config struct with private fields, public getter/setter methods
 - **CLI-Friendly Logging**: Custom slog.Handler in cmd package for clean user output without timestamps
-- **Required Logger Pattern**: gmover and gmutil packages require logger setup with panic protection
+- **Required Logger Pattern**: gmover and gapi packages require logger setup with panic protection
 - **Job-Based Configuration**: Flexible job system supporting both CLI flags and JSON config files
 - **XDG-Compliant Storage**: Credentials and tokens stored in `~/.config/gmail-mover/`
 - **Email-Based Token Storage**: Tokens stored per email address in user config directory
@@ -44,22 +44,22 @@ The codebase follows a clean 3-package structure with unique, branded package na
 go mod tidy
 
 # Build binary (ALWAYS build to ./bin/ directory)
-go build -o bin/gmail-mover ./cmd/
+go build -o bin/gmover ./cmd/
 
 # Show help (default behavior)
-./bin/gmail-mover
+./bin/gmover
 
 # Run with CLI flags
-./bin/gmail-mover -src=user@gmail.com -dst=archive@gmail.com -max=50 -dry-run
+./bin/gmover -src=user@gmail.com -dst=archive@gmail.com -max=50 -dry-run
 
 # Run with job file
-./bin/gmail-mover -job=config.json
+./bin/gmover -job=config.json
 
 # List available labels for an account
-./bin/gmail-mover -list-labels -src=user@gmail.com
+./bin/gmover -list-labels -src=user@gmail.com
 
 # For debugging OAuth or API issues
-./bin/gmail-mover -src=user@gmail.com -dst=archive@gmail.com -dry-run 2>&1 | tee transfer.log
+./bin/gmover -src=user@gmail.com -dst=archive@gmail.com -dry-run 2>&1 | tee transfer.log
 
 # Run tests
 go test ./test/ -v
@@ -79,22 +79,22 @@ Token files are auto-generated in `~/.config/gmail-mover/tokens/` directory usin
 
 ### Show Help (Default)
 ```bash
-./bin/gmail-mover
+./bin/gmover
 ```
 
 ### List Labels
 ```bash
-./bin/gmail-mover -list-labels -src=user@gmail.com
+./bin/gmover -list-labels -src=user@gmail.com
 ```
 
 ### Basic Transfer
 ```bash
-./bin/gmail-mover -src=user@gmail.com -dst=archive@gmail.com -max=100
+./bin/gmover -src=user@gmail.com -dst=archive@gmail.com -max=100
 ```
 
 ### Advanced Filtering  
 ```bash
-./bin/gmail-mover -src=user@gmail.com -dst=archive@gmail.com \
+./bin/gmover -src=user@gmail.com -dst=archive@gmail.com \
   -src-label=INBOX -query="from:newsletter" -max=50 -dry-run
 ```
 
@@ -173,11 +173,11 @@ isDryRun := config.DryRun()
 
 #### Logger Setup (Required)
 ```go
-// Must set logger before using gmover/gmutil packages
+// Must set logger before using gmover/gapi packages
 handler := NewCLIHandler()  // Custom CLI-friendly handler
 logger := slog.New(handler)
 gmover.SetLogger(logger)
-gmutil.SetLogger(logger)
+gapi.SetLogger(logger)
 ```
 
 #### Job Execution Flow
@@ -221,7 +221,7 @@ gmutil.SetLogger(logger)
 ## Dependencies
 
 - `golang.org/x/oauth2`: OAuth2 authentication  
-- `google.golang.org/api/gmail/v1`: Gmail API client (isolated in gmutil package)
+- `google.golang.org/api/gmail/v1`: Gmail API client (isolated in gapi package)
 - Go standard library: `flag` for CLI parsing, `log/slog` for logging
 - No external CLI frameworks - keeps dependencies minimal
 - Follows single major third-party feature package per package rule
@@ -239,9 +239,9 @@ This codebase follows Clear Path style guidelines:
 
 ## Build Standards
 
-- **ALWAYS build executables to `./bin/` directory**: `go build -o bin/gmail-mover ./cmd/`
+- **ALWAYS build executables to `./bin/` directory**: `go build -o bin/gmover ./cmd/`
 - **NEVER build to project root** - keeps the root directory clean
-- **Use `./bin/gmail-mover` for all testing and examples**
+- **Use `./bin/gmover` for all testing and examples**
 
 ## Testing Notes
 
@@ -256,22 +256,22 @@ Manual testing requires:
 - Valid OAuth2 credentials in `credentials.json` 
 - Test messages in source account for specified labels
 
-When adding tests, ensure they follow Clear Path style and call `setupTestLogger()` before using gmover/gmutil packages.
+When adding tests, ensure they follow Clear Path style and call `setupTestLogger()` before using gmover/gapi packages.
 
 ## TODO List
 
 ### High Priority
-- [ ] Fix Job.Execute() to pass full configuration to gmutil.TransferMessagesWithOpts (architectural concern #1)
+- [ ] Fix Job.Execute() to pass full configuration to gapi.TransferMessagesWithOpts (architectural concern #1)
 - [ ] Fix flag logic bug in cmd/main.go listLabels check
-- [ ] Fix log level bug in gmutil/transfer.go:133 (Error should be Info)  
+- [ ] Fix log level bug in gapi/transfer.go:133 (Error should be Info)  
 - [ ] Fix MaxMessages not being set in gmover/src_account.go:30
 
 ### Medium Priority
-- [ ] Add comprehensive integration tests for gmover/gmutil interaction
+- [ ] Add comprehensive integration tests for gmover/gapi interaction
 
 ### Implementation Details
 
-#### applyLabels Function (gmutil/labels.go:50)
+#### applyLabels Function (gapi/labels.go:50)
 The `applyLabels` function currently contains `panic("IMPLEMENT ME")` and needs proper implementation:
 
 **Requirements:**
@@ -286,7 +286,7 @@ The `applyLabels` function currently contains `panic("IMPLEMENT ME")` and needs 
 - `service.Users.Messages.Modify()` - to apply labels to messages
 
 **Current Usage:**
-Called from `gmutil/transfer.go:119` during message transfer when `opts.LabelsToApply` is not empty.
+Called from `gapi/transfer.go:119` during message transfer when `opts.LabelsToApply` is not empty.
 
 **Error Handling:**
 Should follow Clear Path style with `goto end` pattern and return meaningful errors for debugging.

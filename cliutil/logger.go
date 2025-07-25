@@ -1,4 +1,4 @@
-package gmutil
+package cliutil
 
 import (
 	"log/slog"
@@ -12,8 +12,10 @@ func SetLogger(l *slog.Logger) {
 }
 
 // ensureLogger panics if logger is not set
+//
+//goland:noinspection GoUnusedFunction
 func ensureLogger() {
 	if logger == nil {
-		panic("Must set logger with gmutil.SetLogger() before using gmutil package")
+		panic("Must set logger with gmover.SetLogger() before using gmover package")
 	}
 }

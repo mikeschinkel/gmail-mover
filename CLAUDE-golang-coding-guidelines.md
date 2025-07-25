@@ -49,7 +49,7 @@ The Clear Path style prioritizes code readability and maintainability through mi
     - Example: `// MyCustomType is used for ...`
 
 ### Modern Go Practices
-- **Use `any` instead of `interface{}`**
+- **Use `any` instead of `any`**
 
 ## Formatting and Whitespace
 
@@ -190,7 +190,7 @@ Before submitting Golang code, verify:
 - [ ] Named return variables used
 - [ ] All errors handled
 - [ ] Type comments start with type name
-- [ ] `any` used instead of `interface{}`
+- [ ] `any` used instead of `any`
 - [ ] Functions are reasonable length (viewable without scrolling)
 - [ ] No single-use variables for struct literals when the values is intended to be passed as the last parameter to a func (pass directly to func instead.)
 

@@ -1,4 +1,4 @@
-package gmutil
+package gapi
 
 import (
 	"fmt"
@@ -50,5 +50,9 @@ end:
 
 // applyLabels applies a label to a message (simplified implementation)
 func applyLabels(service *gmail.Service, messageID string, labels []string) (err error) {
+	noop(service, messageID, labels)
 	panic("IMPLEMENT ME")
 }
+
+//goland:noinspection GoUnusedParameter
+func noop(...any) {}

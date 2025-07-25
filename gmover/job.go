@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mikeschinkel/gmail-mover/gmutil"
+	"github.com/mikeschinkel/gmail-mover/gapi"
 )
 
 const (
@@ -52,15 +52,15 @@ func (job *Job) Execute() (err error) {
 }
 
 // ExecuteWithApproval runs the job with an optional approval function
-func (job *Job) ExecuteWithApproval(approvalFunc gmutil.ApprovalFunc) (err error) {
+func (job *Job) ExecuteWithApproval(approvalFunc gapi.ApprovalFunc) (err error) {
 	var labelsToApply []string
-	var api *gmutil.GMailAPI
+	var api *gapi.GMailAPI
 
 	if job.DstAccount.ApplyLabel != "" {
 		labelsToApply = []string{job.DstAccount.ApplyLabel}
 	}
 
-	opts := gmutil.TransferOpts{
+	opts := gapi.TransferOpts{
 		Labels:          job.SrcAccount.Labels,
 		SearchQuery:     job.SrcAccount.Query,
 		MaxMessages:     int(job.SrcAccount.MaxMessages),
@@ -70,7 +70,9 @@ func (job *Job) ExecuteWithApproval(approvalFunc gmutil.ApprovalFunc) (err error
 		FailOnError:     !job.Options.FailOnError, // Note: inverted logic
 	}
 
-	api = gmutil.NewGMailAPI(ConfigDirName)
+	api = gapi.NewGMailAPI(ConfigDirName)
+	// CLAUDE: I am wondering if approveFunc should be in api or opts?
+	//         Argue pros and cons of each then let me decide.
 	api.ApprovalFunc = approvalFunc
 	return api.TransferMessagesWithOpts(job.SrcAccount.Email, job.DstAccount.Email, opts)
 }

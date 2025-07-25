@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mikeschinkel/gmail-mover/gmutil"
+	"github.com/mikeschinkel/gmail-mover/cliutil"
+	"github.com/mikeschinkel/gmail-mover/gapi"
 )
 
+// CLAUDE: Now that we have types for each command, do we even need RunMode?
 type RunMode string
 
 const (
@@ -32,56 +34,85 @@ type Config struct {
 	autoConfirm     *bool
 }
 
+func (c *Config) SetValues(values map[string]any) {
+	noop(values)
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Config) Config() {}
+
 func NewConfig(runMode RunMode) Config {
 	return Config{runMode: runMode}
 }
 
-// Getter methods
-func (c Config) RunMode() RunMode {
+// Singleton instance for CLI command configuration
+var globalConfig *Config
+
+var _ cliutil.Config = (*Config)(nil)
+
+// GetConfig returns the singleton config instance
+//
+//goland:noinspection GoUnusedExportedFunction
+func GetConfig() *Config {
+	if globalConfig == nil {
+		config := NewConfig(ShowHelp) // Default mode, will be overridden by commands
+		globalConfig = &config
+	}
+	return globalConfig
+}
+
+// ResetConfig resets the singleton for testing
+//
+//goland:noinspection GoUnusedExportedFunction
+func ResetConfig() {
+	globalConfig = nil
+}
+
+func (c *Config) RunMode() RunMode {
 	return c.runMode
 }
 
-func (c Config) JobFile() string {
+func (c *Config) JobFile() string {
 	return deRef(c.jobFile)
 }
 
-func (c Config) SrcEmail() string {
+func (c *Config) SrcEmail() string {
 	return deRef(c.srcEmail)
 }
 
-func (c Config) SrcLabel() string {
+func (c *Config) SrcLabel() string {
 	return deRef(c.srcLabel)
 }
 
-func (c Config) DstEmail() string {
+func (c *Config) DstEmail() string {
 	return deRef(c.dstEmail)
 }
 
-func (c Config) DstLabel() string {
+func (c *Config) DstLabel() string {
 	return deRef(c.dstLabel)
 }
 
-func (c Config) MaxMessages() int64 {
+func (c *Config) MaxMessages() int64 {
 	return deRef(c.maxMessages)
 }
 
-func (c Config) DryRun() bool {
+func (c *Config) DryRun() bool {
 	return deRef(c.dryRun)
 }
 
-func (c Config) DeleteAfterMove() bool {
+func (c *Config) DeleteAfterMove() bool {
 	return deRef(c.deleteAfterMove)
 }
 
-func (c Config) SearchQuery() string {
+func (c *Config) SearchQuery() string {
 	return deRef(c.searchQuery)
 }
 
-func (c Config) AutoConfirm() bool {
+func (c *Config) AutoConfirm() bool {
 	return deRef(c.autoConfirm)
 }
 
-// Setter methods
 func (c *Config) SetRunMode(mode RunMode) {
 	c.runMode = mode
 }
@@ -132,7 +163,7 @@ func Run(config *Config) (err error) {
 }
 
 // RunWithApproval executes Gmail Mover with the provided configuration and approval function
-func RunWithApproval(config *Config, approvalFunc gmutil.ApprovalFunc) (err error) {
+func RunWithApproval(config *Config, approvalFunc gapi.ApprovalFunc) (err error) {
 	var job *Job
 
 	ensureLogger()
@@ -143,12 +174,14 @@ func RunWithApproval(config *Config, approvalFunc gmutil.ApprovalFunc) (err erro
 		goto end
 	}
 
-	// Handle different run modes
+	// CLAUDE: Shouldn't these switches be delegating to specific implementations
+	// instead of having more that one call per case? Also, is it possible to define
+	// what to run based on a lookup and then metadata, rather than a switch?
 	switch config.RunMode() {
 	case ShowHelp:
 		showUsage()
 	case ListLabels:
-		api := gmutil.NewGMailAPI(ConfigDirName)
+		api := gapi.NewGMailAPI(ConfigDirName)
 		err = api.ListLabels(config.SrcEmail())
 		if err != nil {
 			logger.Error("Failed to list labels", "error", err)
@@ -182,6 +215,9 @@ end:
 }
 
 // validateConfig validates the configuration for the specified run mode
+//
+// CLAUDE: Shouldn't the command have its own validate method rather than a
+// switch here?
 func validateConfig(config *Config) (err error) {
 	switch config.RunMode() {
 	case ShowHelp:
@@ -197,6 +233,7 @@ func validateConfig(config *Config) (err error) {
 }
 
 // validateListLabelsConfig validates configuration for list labels mode
+// CLAUDE: Shouldn't this be in list_label_cmd.go?
 func validateListLabelsConfig(config *Config) (err error) {
 	if config.SrcEmail() == "" {
 		err = fmt.Errorf("source email address is required for listing labels (use -src flag)")
@@ -209,6 +246,7 @@ end:
 }
 
 // validateMoveEmailsConfig validates configuration for move emails mode
+// CLAUDE: Shouldn't this be in move_cmd.go?
 func validateMoveEmailsConfig(config *Config) (err error) {
 	// If using job file, skip individual field validation
 	if config.JobFile() != "" {
@@ -245,8 +283,9 @@ end:
 }
 
 // showUsage displays help information for the Gmail Mover application
+// CLAUDE: Shouldn't this be in help_cmd.go?
 func showUsage() {
-	fmt.Fprintf(os.Stderr, `Gmail Mover - Move emails between Gmail accounts and labels
+	fprintf(os.Stderr, `Gmail Mover - Move emails between Gmail accounts and labels
 
 USAGE:
     gmail-mover [OPTIONS]

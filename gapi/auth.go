@@ -1,4 +1,4 @@
-package gmutil
+package gapi
 
 import (
 	"context"
@@ -142,7 +142,7 @@ func loadTokenFromFile(tokenPath string) (token *oauth2.Token, err error) {
 	if err != nil {
 		goto end
 	}
-	defer f.Close()
+	defer mustCloseOrLog(f)
 
 	token = &oauth2.Token{}
 	err = json.NewDecoder(f).Decode(token)
@@ -191,7 +191,7 @@ func (api *GMailAPI) saveToken(email string, token *oauth2.Token) (err error) {
 	if err != nil {
 		goto end
 	}
-	defer f.Close()
+	defer mustCloseOrLog(f)
 
 	err = json.NewEncoder(f).Encode(token)
 

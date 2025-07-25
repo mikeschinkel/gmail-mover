@@ -485,14 +485,14 @@
 - **Question**: "Is 'it is mostly intuitively obvious' an acceptable answer, or is it too much of a dodge?"
 - **Answer**: It's honest acknowledgment that these decisions are often contextual and experience-based
 
-### G. `any` vs `interface{}` and Generics
-- **"At this point I always prefer using `any` over `interface{}`"**
+### G. `any` vs `any` and Generics
+- **"At this point I always prefer using `any` over `any`"**
 - **Why**:
   - `any` is shorter
   - Doesn't have braces which make reading and writing awkward
   - They both mean exactly the same thing
   - `any` is much easier to reason about
-- **Question**: "Given that, why would you ever want to use `interface{}`?!?"
+- **Question**: "Given that, why would you ever want to use `any`?!?"
 - **Generics not replacement for `any`**: Can't have generic methods per se
 - **When `any` still has value**: Many scenarios where generics don't apply
 - **Always prefer `any`** in modern Go code
