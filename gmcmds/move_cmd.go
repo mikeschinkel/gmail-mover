@@ -50,8 +50,17 @@ func (c *MoveCmd) Handle(ctx context.Context, config cliutil.Config, _ []string)
 		goto end
 	}
 
-	err = gmover.MoveEmails(ctx, gmCfg)
+	err = gmover.MoveEmails(ctx, gmCfg,
+		gmover.MoveEmailOpts{
+			ApprovalFunc: EmailMoverApprover,
+		},
+	)
 
 end:
 	return err
+}
+
+func EmailMoverApprover(prompt string) (approved bool, approveAll bool, err error) {
+	panic("IMPLEMENT ME")
+	return approved, approveAll, err
 }

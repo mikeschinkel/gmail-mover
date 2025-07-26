@@ -24,14 +24,14 @@ type jobFile struct {
 }
 
 // LoadJobFile loads and parses a job file
-func LoadJobFile(filename string) (job *Job, err error) {
+func LoadJobFile(filename JobFile) (job *Job, err error) {
 	var data []byte
 	var jf jobFile
 	var specType reflect.Type
 	var exists bool
 	var spec JobSpec
 
-	data, err = os.ReadFile(filename)
+	data, err = os.ReadFile(string(filename))
 	if err != nil {
 		goto end
 	}
@@ -81,6 +81,12 @@ func SaveJobFile(filename JobFile, spec JobSpec) (err error) {
 	var specData []byte
 	var jobData []byte
 	var jf jobFile
+
+	// Check if file already exists
+	err = checkFileExists(string(filename))
+	if err != nil {
+		goto end
+	}
 
 	// Validation happens during ToConfig() call
 

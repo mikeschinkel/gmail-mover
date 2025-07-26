@@ -1,30 +1,31 @@
 package gmover
 
-import (
-	"fmt"
-	"io"
-)
-
-func fprintf(w io.Writer, format string, a ...any) {
-	_, err := fmt.Fprintf(w, format, a...)
-	if err != nil {
-		logger.Error("Error attempting to output to writer",
-			"writer", w,
-			"output", fmt.Sprintf(format, a...),
-			"error", err)
-	}
-}
-
-func deRef[T any](ptr *T) (v T) {
-	if ptr != nil {
-		v = *ptr
-	}
-	return v
-}
-
-func toPtr[T any](v T) *T {
-	return &v
-}
-
 //goland:noinspection GoUnusedParameter
 func noop(...any) {}
+
+func StringSlice[T ~string](tt []T) (ss []string) {
+	ss = make([]string, len(tt))
+	for i := range tt {
+		ss[i] = string(tt[i])
+	}
+	return ss
+}
+
+// SlicesIntersect returns true if any element in slice1 is also in slice2.
+func SlicesIntersect[S ~string](slice1 []S, slice2 []S) bool {
+	var found bool
+	// Build a map for one of the slices to allow O(1) lookups.
+	lookup := make(map[string]struct{}, len(slice1))
+	for _, s := range slice1 {
+		lookup[string(s)] = struct{}{}
+	}
+
+	for _, s := range slice2 {
+		_, found = lookup[string(s)]
+		if found {
+			goto end
+		}
+	}
+end:
+	return found
+}

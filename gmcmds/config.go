@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/mikeschinkel/gmail-mover/cliutil"
-	"github.com/mikeschinkel/gmail-mover/gmjobs"
 	"github.com/mikeschinkel/gmail-mover/gmover"
 )
 
@@ -58,10 +57,6 @@ func (c *Config) GMoverConfig() (*gmover.Config, error) {
 	config = gmover.NewConfig()
 
 	// Parse all fields, appending any errors (errors.Join filters out nils)
-	if c.JobFile != nil && *c.JobFile != "" {
-		config.JobFile, err = gmjobs.ParseJobFile(*c.JobFile)
-		errs = append(errs, err)
-	}
 
 	if c.SrcEmail != nil && *c.SrcEmail != "" {
 		config.SrcEmail, err = gmover.ParseEmailAddress(*c.SrcEmail)
@@ -81,7 +76,9 @@ func (c *Config) GMoverConfig() (*gmover.Config, error) {
 	}
 
 	if c.DstLabel != nil && *c.DstLabel != "" {
-		config.DstLabel, err = gmover.ParseLabelName(*c.DstLabel)
+		var dstLabel gmover.LabelName
+		dstLabel, err = gmover.ParseLabelName(*c.DstLabel)
+		config.DstLabels = []gmover.LabelName{dstLabel}
 		errs = append(errs, err)
 	}
 

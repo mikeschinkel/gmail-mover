@@ -3,19 +3,17 @@ package gmover
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/mikeschinkel/gmail-mover/gapi"
 )
 
-// MoveEmails executes a move emails operation with the provided configuration
-func MoveEmails(ctx context.Context, config *Config) (err error) {
-	return MoveEmailsWithApproval(ctx, config, nil)
+type MoveEmailOpts struct {
+	ApprovalFunc gapi.ApprovalFunc
 }
 
-// MoveEmailsWithApproval executes a move emails operation with approval function
-func MoveEmailsWithApproval(ctx context.Context, config *Config, approvalFunc gapi.ApprovalFunc) (err error) {
-	var job *Job
+// MoveEmails executes a move emails operation with approval function
+func MoveEmails(ctx context.Context, config *Config, opts MoveEmailOpts) (err error) {
+	var api *gapi.GMailAPI
 
 	ensureLogger()
 
@@ -25,22 +23,28 @@ func MoveEmailsWithApproval(ctx context.Context, config *Config, approvalFunc ga
 		goto end
 	}
 
-	job, err = GetJob(*config)
-	if err != nil {
-		logger.Error("Failed to get job", "error", err)
-		goto end
-	}
-
-	// Execute the job
-	logger.Info("Executing job", "job_name", job.Name)
-	if job.Options.DryRun {
+	// Log execution info
+	logger.Info("Executing move emails operation")
+	if config.DryRun {
 		logger.Info("DRY RUN MODE - No messages will be moved")
 	}
 
-	// Execute the job with approval function and context
-	err = job.ExecuteWithApprovalAndContext(ctx, approvalFunc)
+	// Execute the transfer
+	api = gapi.NewGMailAPI(ConfigDirName)
+	// TODO: Create TransferMessagesWithOptsAndContext that accepts context
+	noop(ctx) // Context will be used when gapi supports it
+	err = api.TransferMessages(string(config.SrcEmail), string(config.DstEmail), gapi.TransferOpts{
+		Labels:          StringSlice(config.SrcLabels),
+		LabelsToApply:   StringSlice(config.DstLabels),
+		SearchQuery:     string(config.SearchQuery),
+		MaxMessages:     int(config.MaxMessages),
+		ApprovalFunc:    opts.ApprovalFunc,
+		DeleteAfterMove: config.DeleteAfterMove,
+		DryRun:          config.DryRun,
+		FailOnError:     false, // Continue on individual message errors
+	})
 	if err != nil {
-		logger.Error("Job execution failed", "error", err)
+		logger.Error("Move operation failed", "error", err)
 	}
 
 end:
@@ -70,12 +74,12 @@ func validateMoveEmailsConfig(config *Config) (err error) {
 		goto end
 	}
 
-	if config.DstLabel.IsZero() {
+	if len(config.DstLabels) == 0 || config.DstLabels[0].IsZero() {
 		err = fmt.Errorf("destination label is required for organizing moved messages (use -dst-label flag)")
 		goto end
 	}
 
-	if string(config.SrcEmail) == string(config.DstEmail) && slices.Contains(config.SrcLabels, config.DstLabel) {
+	if string(config.SrcEmail) == string(config.DstEmail) && SlicesIntersect(config.DstLabels, config.DstLabels) {
 		err = fmt.Errorf("source and destination cannot be the same (same email and same label)")
 		goto end
 	}

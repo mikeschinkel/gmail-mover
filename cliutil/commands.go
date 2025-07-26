@@ -25,7 +25,7 @@ type Command interface {
 	ParentTypes() []reflect.Type
 	FlagSets() []*FlagSet
 	ParseFlagSets([]string, Config) ([]string, error)
-	AssignArgs([]string, Config) error
+	AssignArgs([]string) error
 }
 
 // CommandHandler interface for commands that actually execute logic

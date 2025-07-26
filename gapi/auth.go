@@ -122,6 +122,7 @@ func (api *GMailAPI) getToken(config *oauth2.Config, email string) (token *oauth
 		goto end
 	}
 
+	logger.Info("Requesting access token", "email_address", email)
 	// Get new token via OAuth flow
 	token, err = getTokenFromWeb(config)
 	if err != nil {

@@ -2,7 +2,6 @@ package gmcmds
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/mikeschinkel/gmail-mover/cliutil"
 	"github.com/mikeschinkel/gmail-mover/gmjobs"
@@ -21,6 +20,9 @@ func init() {
 		Name:        "run",
 		Usage:       "run FILE",
 		Description: "Execute a job file",
+		ArgDefs: []*cliutil.ArgDef{
+			{Name: "filename", Usage: "Job filename", Required: true, String: cfg.JobFile},
+		},
 	})
 	cliutil.RegisterCommand(&RunJobCmd{CmdBase: cmd}, &JobCmd{})
 }
@@ -30,28 +32,29 @@ var _ cliutil.CommandHandler = (*RunJobCmd)(nil)
 
 // Handle executes the job run command
 func (c *RunJobCmd) Handle(ctx context.Context, config cliutil.Config, args []string) (err error) {
-	var filename string
 	var job *gmjobs.Job
-	var gmCfg gmjobs.Config
+	var jobCfg gmjobs.Config
+	var cfg *Config
 
-	if len(args) < 1 {
-		err = fmt.Errorf("job filename required")
-		goto end
-	}
-	filename = args[0]
+	cfg = config.(*Config)
 
-	job, err = gmjobs.LoadJobFile(filename)
+	job, err = gmjobs.LoadJobFile(gmjobs.JobFile(*cfg.JobFile))
 	if err != nil {
 		goto end
 	}
 
-	gmCfg, err = job.ToConfig()
+	jobCfg, err = job.ToConfig()
 	if err != nil {
 		goto end
 	}
 
 	// Apply global overrides and run move
-	err = gmover.MoveEmails(ctx, OverrideGlobals(gmCfg, config))
+	err = gmover.MoveEmails(ctx,
+		OverrideGlobals(jobCfg, config),
+		gmover.MoveEmailOpts{
+			ApprovalFunc: EmailMoverApprover,
+		},
+	)
 
 end:
 	return err

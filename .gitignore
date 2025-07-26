@@ -1,7 +1,7 @@
 
 # Build artifacts
-gmail-mover
-gmail-mover.exe
+gmover
+gmover.exe
 bin/
 
 # Go build cache and modules

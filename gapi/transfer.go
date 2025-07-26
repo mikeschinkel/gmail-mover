@@ -1,6 +1,7 @@
 package gapi
 
 import (
+	"fmt"
 	"time"
 
 	"google.golang.org/api/gmail/v1"
@@ -15,23 +16,19 @@ func SetMaxMessages(max int) {
 
 type TransferOpts struct {
 	Labels          []string
-	FailOnError     bool
-	MaxMessages     int
+	LabelsToApply   []string
 	Before          string
 	After           string
 	SearchQuery     string
-	LabelsToApply   []string
+	MaxMessages     int
 	DeleteAfterMove bool
 	DryRun          bool
+	FailOnError     bool
+	ApprovalFunc    // Optional - if nil, auto-approve all messages
 }
 
 // TransferMessages handles the core message transfer logic
-func (api *GMailAPI) TransferMessages(srcEmail, dstEmail string) (err error) {
-	return api.TransferMessagesWithOpts(srcEmail, dstEmail, TransferOpts{})
-}
-
-// TransferMessagesWithOpts handles the core message transfer logic
-func (api *GMailAPI) TransferMessagesWithOpts(srcEmail, dstEmail string, opts TransferOpts) (err error) {
+func (api *GMailAPI) TransferMessages(srcEmail, dstEmail string, opts TransferOpts) (err error) {
 	var messageCount int
 	var label string
 	var messages []*gmail.Message
@@ -107,21 +104,25 @@ func (api *GMailAPI) transferMessage(src, dst *gmail.Service, msg *gmail.Message
 		goto end
 	}
 
+	logger.Info("Transferring message", "message", messageInfo.String())
+
 	// Check approval if ApprovalFunc is set
-	if api.ApprovalFunc != nil {
-		approved, approveAll, err = api.ApprovalFunc(messageInfo)
-		if err != nil {
-			goto end
-		}
-		if !approved {
-			logger.Info("Message skipped by user", "subject", messageInfo.Subject, "id", msg.Id)
-			goto end
-		}
-		if approveAll {
-			// Disable further prompts
-			api.ApprovalFunc = nil
-			logger.Info("Auto-approving remaining messages")
-		}
+	if opts.ApprovalFunc == nil {
+		err = fmt.Errorf("no approval func specified")
+		goto end
+	}
+	approved, approveAll, err = opts.ApprovalFunc(messageInfo.String())
+	if err != nil {
+		goto end
+	}
+	if !approved {
+		logger.Info("Message skipped by user", "subject", messageInfo.Subject, "id", msg.Id)
+		goto end
+	}
+	if approveAll {
+		// Disable further prompts
+		opts.ApprovalFunc = nil
+		logger.Info("Auto-approving remaining messages")
 	}
 
 	if opts.DryRun {
@@ -134,6 +135,8 @@ func (api *GMailAPI) transferMessage(src, dst *gmail.Service, msg *gmail.Message
 	if err != nil {
 		goto end
 	}
+
+	//panic("ADD INFO LOGGING SO WE CAN SEE WHAT IS HAPPENING")
 
 	// Insert into destination
 	insertedMessage, err = dst.Users.Messages.Insert("me", &gmail.Message{
@@ -177,7 +180,7 @@ func (api *GMailAPI) getMessageInfo(service *gmail.Service, msg *gmail.Message) 
 		goto end
 	}
 
-	info.ID = msg.Id
+	info.Id = msg.Id
 
 	// Extract headers
 	for _, header = range fullMessage.Payload.Headers {

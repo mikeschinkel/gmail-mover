@@ -74,7 +74,7 @@ func (cr CmdRunner) Run(ctx context.Context) (err error) {
 		goto end
 	}
 
-	err = cmd.AssignArgs(args, cr.config)
+	err = cmd.AssignArgs(args)
 	if err != nil {
 		goto end
 	}

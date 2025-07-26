@@ -193,7 +193,7 @@ end:
 }
 
 // AssignArgs assigns positional arguments to their defined config fields
-func (c *CmdBase) AssignArgs(args []string, config Config) (err error) {
+func (c *CmdBase) AssignArgs(args []string) (err error) {
 	var errs []error
 
 	// Check if we have enough arguments for required ones

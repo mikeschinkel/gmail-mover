@@ -4,13 +4,15 @@ import (
 	"github.com/mikeschinkel/gmail-mover/gmjobs"
 )
 
+var ConfigDirName = "gmover"
+
 // Config represents the parsed configuration for Gmail Mover operations
 type Config struct {
 	JobFile         gmjobs.JobFile
 	SrcEmail        EmailAddress
 	SrcLabels       []LabelName
 	DstEmail        EmailAddress
-	DstLabel        LabelName
+	DstLabels       []LabelName
 	MaxMessages     MaxMessages
 	DryRun          bool
 	DeleteAfterMove bool
