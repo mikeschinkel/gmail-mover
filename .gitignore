@@ -6,6 +6,7 @@ bin/
 
 # Go build cache and modules
 go.sum
+go.work.sum
 vendor/
 
 # IDE files
