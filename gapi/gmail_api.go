@@ -108,7 +108,7 @@ func (api *GMailAPI) setupCredentials() (err error) {
 
 	// Validate the JSON by trying to parse it
 	credentialsRaw = json.RawMessage(credentialsJSON)
-	_, err = google.ConfigFromJSON([]byte(credentialsRaw), gmail.MailGoogleComScope)
+	_, err = google.ConfigFromJSON(credentialsRaw, gmail.MailGoogleComScope)
 	if err != nil {
 		err = fmt.Errorf("invalid credentials JSON: %w", err)
 		goto end
@@ -136,7 +136,7 @@ func (api *GMailAPI) loadCredentials() (config *oauth2.Config, err error) {
 		goto end
 	}
 
-	config, err = google.ConfigFromJSON([]byte(credentialsJSON), gmail.MailGoogleComScope)
+	config, err = google.ConfigFromJSON(credentialsJSON, gmail.MailGoogleComScope)
 	if err != nil {
 		err = fmt.Errorf("failed to parse credentials: %w", err)
 	}
