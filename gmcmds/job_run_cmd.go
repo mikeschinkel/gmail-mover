@@ -54,7 +54,7 @@ func (c *RunJobCmd) Handle(ctx context.Context, config cliutil.Config, _ []strin
 	err = gmover.MoveEmails(ctx,
 		OverrideGlobals(jobCfg, config),
 		gmover.MoveEmailOpts{
-			ApprovalFunc: EmailMoverApprover,
+			ApprovalFunc: cliutil.PromptForApproval,
 		},
 	)
 

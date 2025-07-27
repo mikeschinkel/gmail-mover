@@ -1,9 +1,6 @@
 package gmcmds
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/mikeschinkel/gmail-mover/cliutil"
 )
 
@@ -23,15 +20,3 @@ func init() {
 		}),
 	})
 }
-
-/*
-// Handle executes the job command
-// Default subcommand routing is now handled declaratively by the framework
-func (c *JobCmd) Handle(ctx context.Context, config cliutil.Config, args []string) (err error) {
-	noop(ctx, config, args)
-	// This should not be reached in normal operation since the framework
-	// should route to the default subcommand. If we get here, show help.
-	err = fmt.Errorf("usage: %s", c.Usage())
-	return err
-}
-*/

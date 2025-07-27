@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"syscall"
 	"time"
 
 	"google.golang.org/api/gmail/v1"
@@ -18,6 +16,19 @@ func SetMaxMessages(max int) {
 	maxMessages = max
 }
 
+type approvalResponse = byte
+
+//goland:noinspection GoUnusedConst
+const (
+	YesResponse    = 'y'
+	NoResponse     = 'n'
+	AllResponse    = 'a'
+	DelayResponse  = 'd'
+	CancelResponse = 'c'
+)
+
+type ApprovalFunc = func(context.Context, string) (ar approvalResponse, err error)
+
 type TransferOpts struct {
 	Labels          []string
 	LabelsToApply   []string
@@ -28,7 +39,9 @@ type TransferOpts struct {
 	DeleteAfterMove bool
 	DryRun          bool
 	FailOnError     bool
-	ApprovalFunc    // Optional - if nil, auto-approve all messages
+	ApprovalFunc    ApprovalFunc // Optional - if nil, auto-approve all messages
+	ApprovalPrompt  string       // Optional - if nil, auto-approve all messages
+	approvalResponse
 }
 
 // TransferMessages handles the core message transfer logic
@@ -119,7 +132,6 @@ func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Servic
 	var fullMessage *gmail.Message
 	var insertedMessage *gmail.Message
 	var messageInfo MessageInfo
-	var approved, approveAll bool
 
 	// Get message details for approval (always needed for logging)
 	messageInfo, err = api.getMessageInfo(src, msg)
@@ -129,23 +141,38 @@ func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Servic
 
 	logger.Info("Transferring message", "message", messageInfo.String())
 
-	// Check approval if ApprovalFunc is set
-	if opts.ApprovalFunc == nil {
-		err = fmt.Errorf("no approval func specified")
-		goto end
-	}
-	approved, approveAll, err = opts.ApprovalFunc(ctx, messageInfo.String())
-	if err != nil {
-		goto end
-	}
-	if !approved {
-		logger.Info("Message skipped by user", "subject", messageInfo.Subject, "id", msg.Id)
-		goto end
-	}
-	if approveAll {
+	case opts.approvalResponse == DelayResponse:
+		logger.Info("Pausing 3 seconds before next email transfer. Press Ctrl-C to terminate")
+		time.Sleep(time.Second * 3)
+
+	case opts.approvalResponse == AllResponse:
 		// Disable further prompts
-		opts.ApprovalFunc = nil
 		logger.Info("Auto-approving remaining messages")
+
+	default:
+		// Check approval if ApprovalFunc is set
+		if opts.ApprovalFunc == nil {
+			err = fmt.Errorf("no approval func specified")
+			goto end
+		}
+		opts.approvalResponse, err = opts.ApprovalFunc(ctx,
+			fmt.Sprintf("%s %s", opts.ApprovalPrompt, messageInfo.String()),
+		)
+		if err != nil {
+			goto end
+		}
+		switch opts.approvalResponse {
+		case CancelResponse:
+			err = context.Canceled
+			goto end
+		case NoResponse:
+			logger.Info("Message skipped by user", "subject", messageInfo.Subject, "id", msg.Id)
+			goto end
+		case DelayResponse:
+			logger.Info("Setting delay to 3 seconds between messages; press Ctrl-C to terminate")
+		case AllResponse:
+			logger.Info("Auto-approving remaining message moves; press Ctrl-C to terminate")
+		}
 	}
 
 	if opts.DryRun {

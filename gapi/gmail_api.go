@@ -26,11 +26,6 @@ func (info MessageInfo) String() string {
 	return fmt.Sprintf("Id: %s, Subject: %s, From: %s", info.Id, info.Subject, info.From)
 }
 
-// ApprovalFunc is called before moving each message
-// Returns: approved (move this message), approveAll (auto-approve remaining), error
-// Context allows cancellation via Ctrl-C
-type ApprovalFunc func(ctx context.Context, prompt string) (approved bool, approveAll bool, err error)
-
 // FileStorer provides file operations for Gmail API
 type FileStorer interface {
 	Load(filename string, data any) error
