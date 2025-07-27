@@ -48,7 +48,7 @@ func (h *CLIHandler) Handle(ctx context.Context, r slog.Record) error {
 		return true
 	})
 
-	fmt.Fprintln(writer, output)
+	fprintf(writer, "%s\n", output)
 	return nil
 }
 
