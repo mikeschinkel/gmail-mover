@@ -39,6 +39,8 @@ var _ cliutil.CommandHandler = (*ListLabelsCmd)(nil)
 func (c *ListLabelsCmd) Handle(_ context.Context, config cliutil.Config, _ []string) (err error) {
 	var gmCfg *gmover.Config
 
+	ensureLogger()
+
 	gmCfg, err = ConvertConfig(config)
 	if err != nil {
 		goto end

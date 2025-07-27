@@ -48,11 +48,71 @@ end:
 	return labels, err
 }
 
-// applyLabels applies a label to a message (simplified implementation)
+// applyLabels applies labels to a message
 func applyLabels(service *gmail.Service, messageID string, labels []string) (err error) {
-	noop(service, messageID, labels)
-	panic("IMPLEMENT ME")
-}
+	var labelIDs []string
+	var labelName string
+	var labelID string
+	var existingLabels []*gmail.Label
+	var existingLabel *gmail.Label
+	var createLabelReq *gmail.Label
+	var newLabel *gmail.Label
 
-//goland:noinspection GoUnusedParameter
-func noop(...any) {}
+	ensureLogger()
+
+	if len(labels) == 0 {
+		goto end
+	}
+
+	// Get existing labels to find IDs
+	existingLabels, err = listLabels(service, "me")
+	if err != nil {
+		goto end
+	}
+
+	// Convert label names to IDs, creating labels if they don't exist
+	for _, labelName = range labels {
+		labelID = ""
+
+		// Find existing label
+		for _, existingLabel = range existingLabels {
+			if existingLabel.Name == labelName {
+				labelID = existingLabel.Id
+				break
+			}
+		}
+
+		// Create label if it doesn't exist
+		if labelID == "" {
+			logger.Info("Creating new label", "label", labelName)
+			createLabelReq = &gmail.Label{
+				Name:                  labelName,
+				MessageListVisibility: "show",
+				LabelListVisibility:   "labelShow",
+			}
+
+			newLabel, err = service.Users.Labels.Create("me", createLabelReq).Do()
+			if err != nil {
+				logger.Error("Failed to create label", "label", labelName, "error", err)
+				goto end
+			}
+			labelID = newLabel.Id
+		}
+
+		labelIDs = append(labelIDs, labelID)
+	}
+
+	// Apply the labels to the message
+	_, err = service.Users.Messages.Modify("me", messageID, &gmail.ModifyMessageRequest{
+		AddLabelIds: labelIDs,
+	}).Do()
+	if err != nil {
+		logger.Error("Failed to apply labels", "message_id", messageID, "labels", labels, "error", err)
+		goto end
+	}
+
+	logger.Info("Applied labels to message", "message_id", messageID, "labels", labels)
+
+end:
+	return err
+}

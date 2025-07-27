@@ -1,4 +1,4 @@
-package gmover
+package gmcmds
 
 import (
 	"log/slog"

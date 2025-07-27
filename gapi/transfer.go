@@ -1,7 +1,11 @@
 package gapi
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"os"
+	"syscall"
 	"time"
 
 	"google.golang.org/api/gmail/v1"
@@ -28,7 +32,7 @@ type TransferOpts struct {
 }
 
 // TransferMessages handles the core message transfer logic
-func (api *GMailAPI) TransferMessages(srcEmail, dstEmail string, opts TransferOpts) (err error) {
+func (api *GMailAPI) TransferMessages(ctx context.Context, srcEmail, dstEmail string, opts TransferOpts) (err error) {
 	var messageCount int
 	var label string
 	var messages []*gmail.Message
@@ -68,13 +72,32 @@ func (api *GMailAPI) TransferMessages(srcEmail, dstEmail string, opts TransferOp
 		}
 
 		for _, message = range messages {
+			// Check for cancellation
+			select {
+			case <-ctx.Done():
+				logger.Info("Operation cancelled by user")
+				err = ctx.Err()
+				goto end
+			default:
+			}
+
 			if messageCount >= opts.MaxMessages {
 				logger.Error("Reached max message limit", "message_limit", opts.MaxMessages)
 				goto end
 			}
 
-			err = api.transferMessage(src, dst, message, opts)
+			err = api.transferMessage(ctx, src, dst, message, opts)
 			if err != nil {
+				// Check if this is a terminal/input error that should abort everything
+				if IsTerminalError(err) {
+					logger.Error("Terminal error - cannot continue", "error", err)
+					goto end
+				}
+
+				if errors.Is(err, context.Canceled) {
+					goto end
+				}
+
 				if !opts.FailOnError {
 					logger.Error("Error transferring message", "error", err)
 					continue
@@ -92,7 +115,7 @@ end:
 }
 
 // transferMessage handles the transfer of a single message
-func (api *GMailAPI) transferMessage(src, dst *gmail.Service, msg *gmail.Message, opts TransferOpts) (err error) {
+func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Service, msg *gmail.Message, opts TransferOpts) (err error) {
 	var fullMessage *gmail.Message
 	var insertedMessage *gmail.Message
 	var messageInfo MessageInfo
@@ -111,7 +134,7 @@ func (api *GMailAPI) transferMessage(src, dst *gmail.Service, msg *gmail.Message
 		err = fmt.Errorf("no approval func specified")
 		goto end
 	}
-	approved, approveAll, err = opts.ApprovalFunc(messageInfo.String())
+	approved, approveAll, err = opts.ApprovalFunc(ctx, messageInfo.String())
 	if err != nil {
 		goto end
 	}
@@ -214,4 +237,35 @@ func (api *GMailAPI) getMessageInfo(service *gmail.Service, msg *gmail.Message) 
 
 end:
 	return info, err
+}
+
+// IsTerminalError checks if an error is related to terminal/input operations
+// These errors should abort the entire operation rather than continue
+func IsTerminalError(err error) (isTermErr bool) {
+	var pathErr *os.PathError
+	var errno syscall.Errno
+	var ok bool
+
+	if err == nil {
+		goto end
+	}
+
+	switch {
+	case errors.As(err, &pathErr):
+		// Check for syscall errors related to terminal operations
+		errno, ok = pathErr.Err.(syscall.Errno)
+		if ok && errno == syscall.ENOTTY { // ENOTTY = "inappropriate ioctl for device"
+			isTermErr = true
+			goto end
+		}
+	case errors.As(err, &errno):
+		// Check for direct syscall errors
+		if errno == syscall.ENOTTY { // ENOTTY = "inappropriate ioctl for device"
+			isTermErr = true
+			goto end
+		}
+	}
+
+end:
+	return isTermErr
 }

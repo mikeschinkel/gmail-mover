@@ -9,10 +9,11 @@ import (
 
 // Job represents a Gmail operation job with parsed spec
 type Job struct {
-	Version string
-	JobType string
-	Name    string
-	Spec    JobSpec
+	Version  string
+	JobType  string
+	Filepath JobFile
+	Name     string
+	Spec     JobSpec
 }
 
 // jobFile is the internal JSON structure for loading
@@ -23,8 +24,8 @@ type jobFile struct {
 	Spec    json.RawMessage `json:"spec"`
 }
 
-// LoadJobFile loads and parses a job file
-func LoadJobFile(filename JobFile) (job *Job, err error) {
+// Load loads and parses a job file
+func Load(filename JobFile) (job *Job, err error) {
 	var data []byte
 	var jf jobFile
 	var specType reflect.Type
@@ -66,27 +67,22 @@ func LoadJobFile(filename JobFile) (job *Job, err error) {
 	// Validation happens during ToConfig() call
 
 	job = &Job{
-		Version: jf.Version,
-		JobType: jf.JobType,
-		Name:    jf.Name,
-		Spec:    spec,
+		Version:  jf.Version,
+		JobType:  jf.JobType,
+		Filepath: filename,
+		Name:     jf.Name,
+		Spec:     spec,
 	}
 
 end:
 	return job, err
 }
 
-// SaveJobFile saves a job spec to a file
-func SaveJobFile(filename JobFile, spec JobSpec) (err error) {
+// Save saves a job spec to a file
+func Save(filename JobFile, spec JobSpec) (err error) {
 	var specData []byte
 	var jobData []byte
 	var jf jobFile
-
-	// Check if file already exists
-	err = checkFileExists(string(filename))
-	if err != nil {
-		goto end
-	}
 
 	// Validation happens during ToConfig() call
 

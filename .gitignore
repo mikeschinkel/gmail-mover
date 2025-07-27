@@ -36,3 +36,6 @@ coverage.out
 *.tmp
 *.temp
 *.json.backup
+
+jobs/
+jobs/**

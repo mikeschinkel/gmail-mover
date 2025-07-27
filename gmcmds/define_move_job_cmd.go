@@ -39,18 +39,20 @@ func init() {
 var _ cliutil.CommandHandler = (*DefineMoveJobCmd)(nil)
 
 // Handle executes the job define command
-func (c *DefineMoveJobCmd) Handle(ctx context.Context, config cliutil.Config, args []string) (err error) {
+func (c *DefineMoveJobCmd) Handle(_ context.Context, config cliutil.Config, _ []string) (err error) {
 	var gmCfg *gmover.Config
 	var jobSpec *gmover.MoveEmailsJobSpec
+	var jobFile gmjobs.JobFile
 
 	gmCfg, err = ConvertConfig(config)
 	if err != nil {
 		goto end
 	}
 
-	jobSpec = gmover.NewMoveEmailsJobSpec(gmCfg)
+	jobFile = gmjobs.JobFile(gmCfg.JobFile)
+	jobSpec = gmover.NewMoveEmailsJobSpec(gmCfg, jobFile)
 
-	err = gmjobs.SaveJobFile(gmCfg.JobFile, jobSpec)
+	err = gmjobs.Save(jobFile, jobSpec)
 	if err != nil {
 		goto end
 	}

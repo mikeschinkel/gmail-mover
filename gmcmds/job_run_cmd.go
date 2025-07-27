@@ -31,14 +31,16 @@ func init() {
 var _ cliutil.CommandHandler = (*RunJobCmd)(nil)
 
 // Handle executes the job run command
-func (c *RunJobCmd) Handle(ctx context.Context, config cliutil.Config, args []string) (err error) {
+func (c *RunJobCmd) Handle(ctx context.Context, config cliutil.Config, _ []string) (err error) {
 	var job *gmjobs.Job
 	var jobCfg gmjobs.Config
 	var cfg *Config
 
+	ensureLogger()
+
 	cfg = config.(*Config)
 
-	job, err = gmjobs.LoadJobFile(gmjobs.JobFile(*cfg.JobFile))
+	job, err = gmjobs.Load(gmjobs.JobFile(*cfg.JobFile))
 	if err != nil {
 		goto end
 	}
