@@ -2,29 +2,29 @@ package gmcfg
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
 
-// FileStore handles configuration directory and file operations
+const ConfigBaseDirName = ".config"
+
 type FileStore struct {
-	appName string
-	baseDir string
+	appName   string
+	configDir string
+	fs        fs.FS
 }
 
-// NewFileStore creates a new file store
 func NewFileStore(appName string) *FileStore {
 	return &FileStore{
 		appName: appName,
 	}
 }
 
-// ConfigDir returns the configuration directory path
-func (fs *FileStore) ConfigDir() (dir string, err error) {
+func (s *FileStore) ConfigDir() (_ string, err error) {
 	var homeDir string
-
-	if fs.baseDir != "" {
-		dir = fs.baseDir
+	if s.configDir != "" {
 		goto end
 	}
 
@@ -33,66 +33,78 @@ func (fs *FileStore) ConfigDir() (dir string, err error) {
 		goto end
 	}
 
-	dir = filepath.Join(homeDir, ".config", fs.appName)
+	s.configDir = filepath.Join(homeDir, ConfigBaseDirName, s.appName)
 
 end:
-	return dir, err
+	return s.configDir, err
 }
 
-// EnsureConfigDir creates the configuration directory if it doesn't exist
-func (fs *FileStore) EnsureConfigDir() (err error) {
+func (s *FileStore) getFS() (_ fs.FS, err error) {
 	var dir string
 
-	dir, err = fs.ConfigDir()
+	if s.fs != nil {
+		goto end
+	}
+
+	dir, err = s.ConfigDir()
 	if err != nil {
 		goto end
 	}
 
-	err = os.MkdirAll(dir, 0755)
+	s.fs = os.DirFS(dir)
 
 end:
-	return err
+	return s.fs, err
 }
 
-// filepath returns the full path to a configuration file
-func (fs *FileStore) filepath(filename string) (path string, err error) {
+func (s *FileStore) ensureFilepath(filename string) (fp string, err error) {
+	fp, err = s.getFilepath(filename)
+	// This is needed in case filename contains a subdirectory, e.g. tokens/token-bill@microsoft.com.json
+	err = os.MkdirAll(filepath.Dir(fp), 0755)
+	if err != nil {
+		goto end
+	}
+end:
+	return fp, err
+}
+
+func (s *FileStore) getFilepath(filename string) (fp string, err error) {
 	var dir string
 
-	dir, err = fs.ConfigDir()
+	dir, err = s.ConfigDir()
 	if err != nil {
 		goto end
 	}
 
-	path = filepath.Join(dir, filename)
+	if !fs.ValidPath(filename) {
+		err = fmt.Errorf("path %s is not valid for use in %s", filename, dir)
+		goto end
+	}
+
+	fp = filepath.Join(s.configDir, filename)
 
 end:
-	return path, err
+	return fp, err
 }
 
-// Save writes data as JSON to a config file
-func (fs *FileStore) Save(filename string, data any) (err error) {
-	var path string
+func (s *FileStore) Save(filename string, data any) (err error) {
 	var jsonData []byte
 	var file *os.File
+	var fullPath string
 
 	ensureLogger()
-
-	err = fs.EnsureConfigDir()
-	if err != nil {
-		goto end
-	}
-
-	path, err = fs.filepath(filename)
-	if err != nil {
-		goto end
-	}
 
 	jsonData, err = json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		goto end
 	}
 
-	file, err = os.Create(path)
+	fullPath, err = s.ensureFilepath(filename)
+	if err != nil {
+		goto end
+	}
+
+	file, err = os.Create(fullPath)
 	if err != nil {
 		goto end
 	}
@@ -104,17 +116,16 @@ end:
 	return err
 }
 
-// Load reads JSON data from a config file
-func (fs *FileStore) Load(filename string, data any) (err error) {
-	var path string
+func (s *FileStore) Load(filename string, data any) (err error) {
 	var jsonData []byte
+	var fsys fs.FS
 
-	path, err = fs.filepath(filename)
+	fsys, err = s.getFS()
 	if err != nil {
 		goto end
 	}
 
-	jsonData, err = os.ReadFile(path)
+	jsonData, err = fs.ReadFile(fsys, filename)
 	if err != nil {
 		goto end
 	}
@@ -125,22 +136,16 @@ end:
 	return err
 }
 
-// Append appends content to a file
-func (fs *FileStore) Append(filename string, content []byte) (err error) {
-	var path string
+func (s *FileStore) Append(filename string, content []byte) (err error) {
 	var file *os.File
+	var fullPath string
 
-	err = fs.EnsureConfigDir()
+	fullPath, err = s.ensureFilepath(filename)
 	if err != nil {
 		goto end
 	}
 
-	path, err = fs.filepath(filename)
-	if err != nil {
-		goto end
-	}
-
-	file, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	file, err = os.OpenFile(fullPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		goto end
 	}
@@ -157,21 +162,19 @@ end:
 	return err
 }
 
-// Exists checks if a configuration file exists
-func (fs *FileStore) Exists(filename string) bool {
-	var path string
-	var err error
-
-	path, err = fs.filepath(filename)
+func (s *FileStore) Exists(filename string) (exists bool) {
+	fsys, err := s.getFS()
 	if err != nil {
-		return false
+		goto end
 	}
+	_, err = fs.Stat(fsys, filename)
+	exists = err == nil
 
-	_, err = os.Stat(path)
-	return err == nil
+end:
+	return exists
 }
 
-// SetBaseDir sets a custom base directory for testing
-func (fs *FileStore) SetBaseDir(dir string) {
-	fs.baseDir = dir
+func (s *FileStore) SetBaseDir(dir string) {
+	s.configDir = dir
+	s.fs = os.DirFS(dir)
 }
