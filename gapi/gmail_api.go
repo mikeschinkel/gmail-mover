@@ -51,7 +51,6 @@ func NewGMailAPI(appConfigDir string, fileStore FileStorer) *GMailAPI {
 func (api *GMailAPI) GetGmailService(email string) (service *gmail.Service, err error) {
 	var config *oauth2.Config
 	var token *oauth2.Token
-	var tokenSource oauth2.TokenSource
 	var client *http.Client
 
 	if !api.fileStore.Exists(CredentialsFileName) {
@@ -72,14 +71,11 @@ func (api *GMailAPI) GetGmailService(email string) (service *gmail.Service, err 
 	}
 
 	// Create a token source that automatically refreshes and saves tokens
-	tokenSource = config.TokenSource(context.Background(), token)
-	tokenSource = &savingTokenSource{
-		base:          tokenSource,
+	client = oauth2.NewClient(context.Background(), &savingTokenSource{
+		base:          config.TokenSource(context.Background(), token),
 		api:           api,
 		tokenFilename: fmt.Sprintf(TokenFileTemplate, email),
-	}
-
-	client = oauth2.NewClient(context.Background(), tokenSource)
+	})
 	service, err = gmail.NewService(context.Background(), option.WithHTTPClient(client))
 
 end:

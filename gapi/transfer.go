@@ -84,6 +84,9 @@ func (api *GMailAPI) TransferMessages(ctx context.Context, srcEmail, dstEmail st
 			goto end
 		}
 
+		if opts.DryRun {
+			logger.Info("DRY RUN")
+		}
 		for _, message = range messages {
 			// Check for cancellation
 			select {
@@ -99,7 +102,7 @@ func (api *GMailAPI) TransferMessages(ctx context.Context, srcEmail, dstEmail st
 				goto end
 			}
 
-			err = api.transferMessage(ctx, src, dst, message, opts)
+			err = api.transferMessage(ctx, src, dst, message, &opts)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					goto end
@@ -122,7 +125,7 @@ end:
 }
 
 // transferMessage handles the transfer of a single message
-func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Service, msg *gmail.Message, opts TransferOpts) (err error) {
+func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Service, msg *gmail.Message, opts *TransferOpts) (err error) {
 	var fullMessage *gmail.Message
 	var insertedMessage *gmail.Message
 	var messageInfo MessageInfo
@@ -133,7 +136,18 @@ func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Servic
 		goto end
 	}
 
-	logger.Info("Transferring message", "message", messageInfo.String())
+	if !opts.DryRun {
+		logger.Info("Email to move", "email", messageInfo.String())
+	}
+
+	switch {
+	case opts.DryRun:
+		logger.Info("DRY RUN: Would move message",
+			"src_id", msg.Id,
+			"subject", messageInfo.Subject,
+			"sender", messageInfo.From,
+		)
+		goto end
 
 	case opts.approvalResponse == DelayResponse:
 		logger.Info("Pausing 3 seconds before next email transfer. Press Ctrl-C to terminate")
@@ -169,18 +183,16 @@ func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Servic
 		}
 	}
 
-	if opts.DryRun {
-		logger.Info("DRY RUN: Would move message", "src_id", msg.Id, "subject", messageInfo.Subject)
-		goto end
-	}
+	logger.Info("Transferring email...")
+
+	// Don't hammer the Gmail server
+	time.Sleep(time.Millisecond * 100)
 
 	// Get full msg content
 	fullMessage, err = src.Users.Messages.Get("me", msg.Id).Format("raw").Do()
 	if err != nil {
 		goto end
 	}
-
-	//panic("ADD INFO LOGGING SO WE CAN SEE WHAT IS HAPPENING")
 
 	// Insert into destination
 	insertedMessage, err = dst.Users.Messages.Insert("me", &gmail.Message{

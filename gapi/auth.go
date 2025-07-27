@@ -8,10 +8,8 @@ import (
 )
 
 const (
-	ConfigBaseDirName   = ".config"
 	CredentialsFileName = "credentials.json"
-	TokensDirName       = "tokens"
-	TokenFileTemplate   = "%s_token.json"
+	TokenFileTemplate   = "tokens/token-%s.json"
 )
 
 func getTokenFromWeb(config *oauth2.Config) (token *oauth2.Token, err error) {
