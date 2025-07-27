@@ -23,12 +23,12 @@ func NewCLIHandler() *CLIHandler {
 }
 
 // Enabled always returns true for all levels
-func (h *CLIHandler) Enabled(ctx context.Context, level slog.Level) bool {
+func (h *CLIHandler) Enabled(_ context.Context, _ slog.Level) bool {
 	return true
 }
 
 // Handle formats and outputs log records in a CLI-friendly way
-func (h *CLIHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *CLIHandler) Handle(_ context.Context, r slog.Record) error {
 	var output string
 	var writer io.Writer
 
@@ -53,13 +53,13 @@ func (h *CLIHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 // WithAttrs returns a new handler with additional attributes
-func (h *CLIHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (h *CLIHandler) WithAttrs(_ []slog.Attr) slog.Handler {
 	// For simplicity, return the same handler since we handle attrs in Handle()
 	return h
 }
 
 // WithGroup returns a new handler with a group name
-func (h *CLIHandler) WithGroup(name string) slog.Handler {
+func (h *CLIHandler) WithGroup(_ string) slog.Handler {
 	// For CLI output, we don't need grouping
 	return h
 }
