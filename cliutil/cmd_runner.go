@@ -34,7 +34,7 @@ func NewCmdRunner(args CmdRunnerArgs) *CmdRunner {
 
 func (cr CmdRunner) Run(ctx context.Context) (err error) {
 	var cmd Command
-	var cmdPath string
+	var path string
 	var args []string
 	var handler CommandHandler
 	var ok bool
@@ -57,15 +57,15 @@ func (cr CmdRunner) Run(ctx context.Context) (err error) {
 	}
 
 	// Try to find the most specific command match
-	cmdPath, args = findBestCmdMatch(args)
-	if cmdPath == "" {
+	path, args = findBestCmdMatch(args)
+	if path == "" {
 		err = fmt.Errorf("unknown command: %s\nRun 'gmover help' for usage", args[0])
 		goto end
 	}
 
-	cmd = GetDefaultCommand(cmdPath, args)
+	cmd, path = GetDefaultCommand(path, args)
 	if cmd == nil {
-		err = fmt.Errorf("command not found: %s", cmdPath)
+		err = fmt.Errorf("command not found: %s", path)
 		goto end
 	}
 
@@ -93,25 +93,44 @@ end:
 }
 
 // findBestCmdMatch finds the longest matching command path
-func findBestCmdMatch(args []string) (cmdPath string, remainingArgs []string) {
+func findBestCmdMatch(args []string) (path string, remainingArgs []string) {
+	var cmd Command
+	var tryPath string
+	var n int
+	tryPaths := make([]string, len(args))
 
-	// Try progressively longer paths
-	for i := 1; i <= len(args); i++ {
-		testPath := strings.Join(args[:i], ".")
-		cmd := GetExactCommand(testPath)
-		if cmd == nil {
+	for i, arg := range args {
+		if strings.HasPrefix(arg, "-") {
 			break
 		}
-		cmdPath = testPath
-		remainingArgs = args[i:]
+		tryPath = fmt.Sprintf("%s.%s", tryPath, arg)
+		if i == 0 {
+			tryPath = strings.TrimLeft(tryPath, ".")
+		}
+		n++
+		tryPaths[len(tryPaths)-i-1] = tryPath
+	}
+	if n < len(args) {
+		tryPaths = tryPaths[len(tryPaths)-n:]
+	}
+
+	// Try progressively longer paths
+	for _, p := range tryPaths {
+		cmd, p = GetDefaultCommand(p, args)
+		if cmd != nil {
+			path = p
+			remainingArgs = args[n:]
+			break
+		}
+		n--
 	}
 
 	// If no match found, return empty path with original args
-	if cmdPath == "" {
+	if path == "" {
 		remainingArgs = args
 	}
 
-	return cmdPath, remainingArgs
+	return path, remainingArgs
 }
 
 // ShowMainHelp displays the main help screen

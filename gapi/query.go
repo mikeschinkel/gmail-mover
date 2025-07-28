@@ -10,7 +10,7 @@ type GMailQuery struct {
 	Labels      []string
 	Before      string
 	After       string
-	Extra       string
+	Search      string
 	MaxMessages int
 }
 
@@ -72,8 +72,8 @@ func (gq GMailQuery) BuildQueryString() (query string) {
 		query = fmt.Sprintf("%s after:%s", query, gq.After)
 	}
 
-	if gq.Extra != "" {
-		query = fmt.Sprintf("%s %s", query, gq.Extra)
+	if gq.Search != "" {
+		query = fmt.Sprintf("%s %s", query, gq.Search)
 	}
 
 	return query

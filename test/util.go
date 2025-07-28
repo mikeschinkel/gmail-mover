@@ -1,16 +1,21 @@
 package test
 
 import (
-	"log/slog"
-	"os"
-
-	"github.com/mikeschinkel/gmail-mover/gapi"
-	"github.com/mikeschinkel/gmail-mover/gmover"
+	"fmt"
+	"io"
+	"log"
 )
 
-// setupTestLogger creates a basic slog logger for tests
-func setupTestLogger() {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	gmover.SetLogger(logger)
-	gapi.SetLogger(logger)
+// Utility functions that should be in the standard library but aren't
+
+//goland:noinspection GoUnusedFunction
+func fprintf(w io.Writer, format string, a ...any) {
+	_, err := fmt.Fprintf(w, format, a...)
+	if err != nil {
+		log.Printf("Error attempting to output to writer: %v [writer=%v,message=%s]",
+			err,
+			w,
+			fmt.Sprintf(format, a...),
+		)
+	}
 }

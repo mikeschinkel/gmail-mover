@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 )
 
@@ -31,6 +32,15 @@ func Load(filename JobFile) (job *Job, err error) {
 	var specType reflect.Type
 	var exists bool
 	var spec JobSpec
+	var wd string
+
+	if !filepath.IsAbs(string(filename)) {
+		wd, err = os.Getwd()
+		if err != nil {
+			goto end
+		}
+		filename = JobFile(filepath.Join(wd, string(filename)))
+	}
 
 	data, err = os.ReadFile(string(filename))
 	if err != nil {
@@ -95,10 +105,14 @@ func Save(filename JobFile, spec JobSpec) (err error) {
 		Version: "1.0",
 		JobType: spec.JobType(),
 		Name:    spec.Name(),
-		Spec:    json.RawMessage(specData),
+		Spec:    specData,
 	}
 
 	jobData, err = json.MarshalIndent(jf, "", "  ")
+	if err != nil {
+		goto end
+	}
+	err = ensureFileDoesNotExist(string(filename))
 	if err != nil {
 		goto end
 	}

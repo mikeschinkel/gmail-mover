@@ -48,8 +48,12 @@ type Config struct {
 
 func (c *Config) Config() {}
 
+type GMoverConfigArgs struct {
+	JobFileMustExist bool
+}
+
 // GMoverConfig converts the gmcmds.Config to a gmover.Config with domain types
-func (c *Config) GMoverConfig() (*gmover.Config, error) {
+func (c *Config) GMoverConfig(args GMoverConfigArgs) (*gmover.Config, error) {
 	var config *gmover.Config
 	var errs []error
 	var err error
@@ -57,6 +61,10 @@ func (c *Config) GMoverConfig() (*gmover.Config, error) {
 	config = gmover.NewConfig()
 
 	// Parse all fields, appending any errors (errors.Join filters out nils)
+	if c.JobFile != nil && *c.JobFile != "" {
+		config.JobFile, err = gmover.ParseJobFile(*c.JobFile, args.JobFileMustExist)
+		errs = append(errs, err)
+	}
 
 	if c.SrcEmail != nil && *c.SrcEmail != "" {
 		config.SrcEmail, err = gmover.ParseEmailAddress(*c.SrcEmail)
@@ -119,7 +127,9 @@ func ConvertConfig(config cliutil.Config) (gmc *gmover.Config, err error) {
 		err = fmt.Errorf("invalid config type")
 		goto end
 	}
-	gmc, err = cfg.GMoverConfig()
+	gmc, err = cfg.GMoverConfig(GMoverConfigArgs{
+		JobFileMustExist: false,
+	})
 end:
 	return gmc, err
 }

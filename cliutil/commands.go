@@ -131,7 +131,7 @@ func GetExactCommand(path string) Command {
 }
 
 // GetDefaultCommand retrieves a command or its default at any depth using dot notation
-func GetDefaultCommand(path string, args []string) (cmd Command) {
+func GetDefaultCommand(path string, args []string) (cmd Command, _ string) {
 	var defaultCmd Command
 	var delegateType reflect.Type
 	var exists bool
@@ -156,19 +156,27 @@ func GetDefaultCommand(path string, args []string) (cmd Command) {
 		goto end
 	}
 
-	// Delegate to default subcommand
-	// CLAUDE: Will this work for > 1 level of sub command?
-	if cmd.DelegateTo() != nil {
-		// Look up delegate by type
-		delegateType = reflect.TypeOf(cmd.DelegateTo()).Elem()
-		defaultCmd, exists = commandsTypeMap[delegateType]
-		if exists {
-			cmd = defaultCmd
+	if cmd.DelegateTo() == nil {
+		goto end
+	}
+
+	// Delegate to a default subcommand
+	// Look up delegate by type
+	delegateType = reflect.TypeOf(cmd.DelegateTo()).Elem()
+	defaultCmd, exists = commandsTypeMap[delegateType]
+	if exists {
+		cmd = defaultCmd
+		for _, p := range cmd.FullNames() {
+			if !strings.HasPrefix(p, path) {
+				continue
+			}
+			path = p
 		}
+		// TOOD: Should we add any error messages to use saying if we did not find a match?
 	}
 
 end:
-	return cmd
+	return cmd, path
 }
 
 // GetTopLevelCmds returns all top-level commands sorted by name

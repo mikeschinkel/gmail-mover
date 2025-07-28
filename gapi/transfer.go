@@ -29,9 +29,34 @@ const (
 
 type ApprovalFunc = func(context.Context, string) (ar approvalResponse, err error)
 
+// MoveLogEntry represents a single email move operation for JSON logging
+type MoveLogEntry struct {
+	Timestamp   time.Time `json:"timestamp"`
+	MessageID   string    `json:"msg_id"`
+	Subject     string    `json:"subject"`
+	Date        string    `json:"date"`
+	To          string    `json:"to"`
+	From        string    `json:"from"`
+	SrcEmail    string    `json:"src"`
+	DstEmail    string    `json:"dst"`
+	SrcLabels   []string  `json:"src_labels"`
+	DstLabels   []string  `json:"dst_labels"`
+	Moved       bool      `json:"moved"`
+	Deleted     bool      `json:"deleted"`
+	Labeled     bool      `json:"labeled"`
+	DateParsed  bool      `json:"date_parsed"`
+	Error       error     `json:"error,omitempty"`
+	MessageInfo `json:"-"`
+}
+
+type MoveLogger interface {
+	LogMove(MoveLogEntry) error
+}
+
 type TransferOpts struct {
 	Labels          []string
 	LabelsToApply   []string
+	LabelsToRemove  []string
 	Before          string
 	After           string
 	SearchQuery     string
@@ -39,8 +64,10 @@ type TransferOpts struct {
 	DeleteAfterMove bool
 	DryRun          bool
 	FailOnError     bool
+	MoveLogger      MoveLogger
 	ApprovalFunc    ApprovalFunc // Optional - if nil, auto-approve all messages
 	ApprovalPrompt  string       // Optional - if nil, auto-approve all messages
+	sameAccount     bool         // Internal flag for same-account operations
 	approvalResponse
 }
 
@@ -51,17 +78,27 @@ func (api *GMailAPI) TransferMessages(ctx context.Context, srcEmail, dstEmail st
 	var messages []*gmail.Message
 	var message *gmail.Message
 	var src, dst *gmail.Service
+	var msgInfo MessageInfo
 
 	ensureLogger()
+
+	// Check if this is a same-account operation
+	if srcEmail == dstEmail {
+		opts.sameAccount = true
+	}
 
 	src, err = api.GetGmailService(srcEmail)
 	if err != nil {
 		goto end
 	}
 
-	dst, err = api.GetGmailService(dstEmail)
-	if err != nil {
-		goto end
+	if opts.sameAccount {
+		dst = src // Use same service for same-account operations
+	} else {
+		dst, err = api.GetGmailService(dstEmail)
+		if err != nil {
+			goto end
+		}
 	}
 
 	logger.Info("Processing messages", "labels", opts.Labels)
@@ -71,7 +108,7 @@ func (api *GMailAPI) TransferMessages(ctx context.Context, srcEmail, dstEmail st
 			Labels:      []string{label},
 			Before:      opts.Before,
 			After:       opts.After,
-			Extra:       opts.SearchQuery,
+			Search:      opts.SearchQuery,
 			MaxMessages: opts.MaxMessages,
 		}
 
@@ -98,23 +135,46 @@ func (api *GMailAPI) TransferMessages(ctx context.Context, srcEmail, dstEmail st
 			}
 
 			if messageCount >= opts.MaxMessages {
-				logger.Error("Reached max message limit", "message_limit", opts.MaxMessages)
+				logger.Error("Reached max email limit", "message_limit", opts.MaxMessages)
 				goto end
 			}
 
-			err = api.transferMessage(ctx, src, dst, message, &opts)
+			msgInfo, err = api.transferMessage(ctx, src, dst, message, &opts)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					goto end
 				}
 
 				if !opts.FailOnError {
-					logger.Error("Error transferring message", "error", err)
+					logger.Error("Error transferring email", "error", err)
 					continue
 				}
 				goto end
 			}
-
+			if !opts.DryRun && opts.MoveLogger != nil {
+				func() {
+					err := opts.MoveLogger.LogMove(MoveLogEntry{
+						Timestamp:  time.Now(),
+						MessageID:  msgInfo.Id,
+						Subject:    msgInfo.Subject,
+						Date:       msgInfo.Date.Format(time.DateTime),
+						To:         msgInfo.To,
+						From:       msgInfo.From,
+						SrcEmail:   srcEmail,
+						DstEmail:   dstEmail,
+						SrcLabels:  opts.Labels,
+						DstLabels:  opts.LabelsToApply,
+						Moved:      msgInfo.Moved,
+						Deleted:    msgInfo.Deleted,
+						Labeled:    msgInfo.Labeled,
+						DateParsed: msgInfo.DateParsed,
+						Error:      err,
+					})
+					if err != nil {
+						logger.Warn("Error logging email message move", "error", err, "email", msgInfo)
+					}
+				}()
+			}
 			messageCount++
 		}
 	}
@@ -125,28 +185,37 @@ end:
 }
 
 // transferMessage handles the transfer of a single message
-func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Service, msg *gmail.Message, opts *TransferOpts) (err error) {
+func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Service, message *gmail.Message, opts *TransferOpts) (msgInfo MessageInfo, err error) {
 	var fullMessage *gmail.Message
 	var insertedMessage *gmail.Message
-	var messageInfo MessageInfo
 
 	// Get message details for approval (always needed for logging)
-	messageInfo, err = api.getMessageInfo(src, msg)
+	msgInfo, err = api.GetMessageInfo(src, message)
 	if err != nil {
 		goto end
 	}
 
 	if !opts.DryRun {
-		logger.Info("Email to move", "email", messageInfo.String())
+		logger.Info("Email to move", "email", msgInfo.String())
 	}
 
 	switch {
 	case opts.DryRun:
-		logger.Info("DRY RUN: Would move message",
-			"src_id", msg.Id,
-			"subject", messageInfo.Subject,
-			"sender", messageInfo.From,
-		)
+		if opts.sameAccount {
+			logger.Info("DRY RUN: Would change labels on message",
+				"msg_id", msgInfo.Id,
+				"subject", msgInfo.Subject,
+				"sender", msgInfo.From,
+				"add_labels", opts.LabelsToApply,
+				"remove_labels", opts.LabelsToRemove,
+			)
+		} else {
+			logger.Info("DRY RUN: Would move message",
+				"src_id", msgInfo.Id,
+				"subject", msgInfo.Subject,
+				"sender", msgInfo.From,
+			)
+		}
 		goto end
 
 	case opts.approvalResponse == DelayResponse:
@@ -157,6 +226,10 @@ func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Servic
 		// Disable further prompts
 		logger.Info("Auto-approving remaining messages")
 
+	case opts.approvalResponse == CancelResponse:
+		err = context.Canceled
+		goto end
+
 	default:
 		// Check approval if ApprovalFunc is set
 		if opts.ApprovalFunc == nil {
@@ -164,17 +237,14 @@ func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Servic
 			goto end
 		}
 		opts.approvalResponse, err = opts.ApprovalFunc(ctx,
-			fmt.Sprintf("%s %s", opts.ApprovalPrompt, messageInfo.String()),
+			fmt.Sprintf("%s %s", opts.ApprovalPrompt, msgInfo.String()),
 		)
 		if err != nil {
 			goto end
 		}
 		switch opts.approvalResponse {
-		case CancelResponse:
-			err = context.Canceled
-			goto end
 		case NoResponse:
-			logger.Info("Message skipped by user", "subject", messageInfo.Subject, "id", msg.Id)
+			logger.Info("Message skipped by user", "subject", msgInfo.Subject, "id", msgInfo.Id)
 			goto end
 		case DelayResponse:
 			logger.Info("Setting delay to 3 seconds between messages; press Ctrl-C to terminate")
@@ -183,50 +253,67 @@ func (api *GMailAPI) transferMessage(ctx context.Context, src, dst *gmail.Servic
 		}
 	}
 
-	logger.Info("Transferring email...")
-
 	// Don't hammer the Gmail server
 	time.Sleep(time.Millisecond * 100)
 
-	// Get full msg content
-	fullMessage, err = src.Users.Messages.Get("me", msg.Id).Format("raw").Do()
-	if err != nil {
-		goto end
-	}
+	if opts.sameAccount {
+		// Same-account operation: modify labels instead of insert/delete
+		logger.Info("Changing labels...")
 
-	// Insert into destination
-	insertedMessage, err = dst.Users.Messages.Insert("me", &gmail.Message{
-		Raw: fullMessage.Raw,
-	}).Do()
-	if err != nil {
-		goto end
-	}
-
-	// Apply label if specified
-	if len(opts.LabelsToApply) != 0 {
-
-		err = applyLabels(dst, insertedMessage.Id, opts.LabelsToApply)
+		err = modifyLabels(dst, msgInfo.Id, opts.LabelsToApply, opts.LabelsToRemove)
 		if err != nil {
 			goto end
 		}
-	}
+		msgInfo.Moved = true
+		msgInfo.Labeled = true
 
-	// Delete from source if requested
-	if opts.DeleteAfterMove {
-		err = src.Users.Messages.Delete("me", msg.Id).Do()
+		logger.Info("Changed labels on message", "msg_id", msgInfo.Id)
+	} else {
+		// Cross-account operation: use insert/delete approach
+		logger.Info("Transferring email...")
+
+		// Get full msgInfo content
+		fullMessage, err = src.Users.Messages.Get("me", msgInfo.Id).Format("raw").Do()
 		if err != nil {
 			goto end
 		}
-	}
 
-	logger.Info("Moved message", "src_id", msg.Id, "dst_id", insertedMessage.Id)
+		// Insert into destination with original email date preserved
+		insertedMessage, err = dst.Users.Messages.Insert("me", &gmail.Message{
+			Raw: fullMessage.Raw,
+		}).InternalDateSource("dateHeader").Do()
+		if err != nil {
+			goto end
+		}
+		msgInfo.Moved = true
+
+		// Apply label if specified
+		if len(opts.LabelsToApply) != 0 {
+			err = applyLabels(dst, insertedMessage.Id, opts.LabelsToApply)
+			if err != nil {
+				goto end
+			}
+		}
+		msgInfo.Labeled = true
+
+		// Delete from source if requested
+		if opts.DeleteAfterMove {
+			err = src.Users.Messages.Delete("me", msgInfo.Id).Do()
+			if err != nil {
+				goto end
+			}
+		}
+		msgInfo.Deleted = true
+
+		logger.Info("Moved message", "src_id", msgInfo.Id, "dst_id", insertedMessage.Id)
+	}
 
 end:
-	return err
+	return msgInfo, err
 }
 
-// getMessageInfo extracts message details for approval decisions
-func (api *GMailAPI) getMessageInfo(service *gmail.Service, msg *gmail.Message) (info MessageInfo, err error) {
+// GetMessageInfo extracts message details for approval decisions
+func (api *GMailAPI) GetMessageInfo(service *gmail.Service, msg *gmail.Message) (msgInfo MessageInfo, err error) {
 	var fullMessage *gmail.Message
 	var header *gmail.MessagePartHeader
 
@@ -236,38 +323,35 @@ func (api *GMailAPI) getMessageInfo(service *gmail.Service, msg *gmail.Message) 
 		goto end
 	}
 
-	info.Id = msg.Id
+	msgInfo.Id = msg.Id
 
 	// Extract headers
 	for _, header = range fullMessage.Payload.Headers {
 		switch header.Name {
 		case "Subject":
-			info.Subject = header.Value
+			msgInfo.Subject = header.Value
 		case "From":
-			info.From = header.Value
+			msgInfo.From = header.Value
 		case "To":
-			info.To = header.Value
+			msgInfo.To = header.Value
 		case "Date":
-			// Parse RFC2822 date format
-			info.Date, _ = time.Parse(time.RFC1123Z, header.Value)
-			if info.Date.IsZero() {
-				// Try alternative format
-				info.Date, _ = time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", header.Value)
-			}
+			// Parse RFC2822 date format with multiple fallback formats
+			msgInfo.Date, msgInfo.DateParsed = parseEmailDate(header.Value)
 		}
 	}
 
 	// Fallback values
-	if info.Subject == "" {
-		info.Subject = "(no subject)"
+	if msgInfo.Subject == "" {
+		msgInfo.Subject = "(no subject)"
 	}
-	if info.From == "" {
-		info.From = "(unknown sender)"
+	if msgInfo.From == "" {
+		msgInfo.From = "(unknown sender)"
 	}
-	if info.To == "" {
-		info.To = "(unknown recipient)"
+	if msgInfo.To == "" {
+		msgInfo.To = "(unknown recipient)"
 	}
+	// Date fallback is handled in parseEmailDate function
 
 end:
-	return info, err
+	return msgInfo, err
 }

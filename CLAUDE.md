@@ -4,36 +4,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Status:** Active development - Core functionality implemented
+**Status:** Active development - Core functionality implemented and working
 
-Gmail Mover is a Go CLI tool that transfers email messages between Gmail accounts using OAuth2 authentication and the Gmail API. It supports flexible job configuration, CLI flags, label filtering, Gmail queries, dry-run mode, and advanced message processing features.
+Gmail Mover is a Go CLI tool that transfers email messages between Gmail accounts using OAuth2 authentication and the Gmail API. It supports interactive message approval, automatic labeling, job configuration, CLI flags, label filtering, Gmail queries, dry-run mode, and advanced message processing features.
 
 ## Architecture
 
-The codebase follows a clean 3-package structure with unique, branded package names:
+The codebase follows a clean multi-package structure with unique, branded package names:
 
-- **cmd package**: CLI entry point with flag parsing, CLI-friendly slog logger, and application orchestration
-- **gmover package**: Core business logic, job management, configuration handling with private fields and getter/setter methods
-- **gapi package**: Gmail API operations including authentication, message transfer, label management, and query building
+- **cmd package**: CLI entry point with CLI-friendly slog logger and application orchestration
+- **gmover package**: Core business logic with domain types and configuration handling
+- **gapi package**: Gmail API operations including authentication, message transfer, label management, and query building with pagination
+- **gmcmds package**: Command handlers implementing the command pattern
+- **gmcfg package**: Centralized configuration file management with filesystem sandboxing
+- **cliutil package**: CLI utilities, command registration, and terminal handling
 
 ### Key Design Patterns
 
 - **Clear Path Style**: All functions use `goto end` with single exit point, named return variables
-- **Unique Package Naming**: Follows branded naming (gmover, gapi) to avoid ecosystem conflicts
+- **Unique Package Naming**: Follows branded naming (gmover, gapi, gmcfg) to avoid ecosystem conflicts
 - **Constructor Pattern**: All types have New*() constructors with proper defaults
-- **Encapsulated Configuration**: Config struct with private fields, public getter/setter methods
+- **Domain Types**: EmailAddress, LabelName, etc. with validation and zero-value checking
 - **CLI-Friendly Logging**: Custom slog.Handler in cmd package for clean user output without timestamps
-- **Required Logger Pattern**: gmover and gapi packages require logger setup with panic protection
-- **Job-Based Configuration**: Flexible job system supporting both CLI flags and JSON config files
-- **XDG-Compliant Storage**: Credentials and tokens stored in `~/.config/gmail-mover/`
-- **Email-Based Token Storage**: Tokens stored per email address in user config directory
-- **Single Credentials File**: Uses one `credentials.json` for all accounts
+- **Command Pattern**: Extensible command system with registration and validation
+- **Interactive Approval**: Single-character input with terminal raw mode and graceful fallbacks
+- **Automatic Labeling**: All moved messages get [Gmoved] label for safety
+- **Date Preservation**: Original email dates are preserved in Gmail interface using RFC2822 parsing
+- **XDG-Compliant Storage**: Credentials and tokens stored in `~/.config/gmover/`
+- **Email-Based Token Storage**: Tokens stored per email address with automatic refresh
+- **Single Credentials File**: Uses one `credentials.json` for all accounts with guided setup
 - **Query Building**: Dynamic Gmail query construction with label, date, and custom filters
+- **Pagination Support**: Handles Gmail API pagination to process >500 messages
 - **Dry-Run Support**: Preview mode without actually moving messages
 - **Interactive Auth**: Copy-paste OAuth flow without callback servers
-- **Safe Default Behavior**: Defaults to ShowHelp mode instead of destructive operations
-- **Explicit Mode Switching**: Requires `-dst` or `-job` flags to enable move operations
-- **Configuration Validation**: Early validation of required fields before execution
+- **Guided Credentials Setup**: Interactive flow for OAuth2 setup instead of manual file placement
+- **Terminal Error Detection**: Proper handling of non-TTY environments (like IDE consoles)
+- **OAuth Token Refresh**: Automatic token refresh with persistence
+- **Atomic Message Operations**: Ctrl-C protection ensures no partial message transfers
 
 ## Development Commands
 
@@ -49,17 +56,14 @@ go build -o bin/gmover ./cmd/
 # Show help (default behavior)
 ./bin/gmover
 
-# Run with CLI flags
-./bin/gmover -src=user@gmail.com -dst=archive@gmail.com -max=50 -dry-run
-
-# Run with job file
-./bin/gmover -job=config.json
+# Run with job file (recommended)
+./bin/gmover job run my-job.json --dry-run
 
 # List available labels for an account
-./bin/gmover -list-labels -src=user@gmail.com
+./bin/gmover list labels --src=user@gmail.com
 
-# For debugging OAuth or API issues
-./bin/gmover -src=user@gmail.com -dst=archive@gmail.com -dry-run 2>&1 | tee transfer.log
+# Create a new job interactively
+./bin/gmover job define move-emails
 
 # Run tests
 go test ./test/ -v
@@ -67,13 +71,16 @@ go test ./test/ -v
 
 ## Authentication Setup
 
-Before first run, you need:
+The application now provides **guided setup** - no manual credential file placement required:
 
-1. Google Cloud Console project with Gmail API enabled
-2. OAuth 2.0 Client ID (Desktop Application type)
-3. Downloaded credentials placed in: `~/.config/gmail-mover/credentials.json`
+1. **Google Cloud Console project** with Gmail API enabled
+2. **OAuth 2.0 Client ID** (Desktop Application type)
+3. **Run the application** - it will guide you through credential setup
+4. **Paste credentials JSON** when prompted during first run
 
-Token files are auto-generated in `~/.config/gmail-mover/tokens/` directory using format `{email}_token.json` after first authorization for each email address.
+**Important**: Now uses `gmail.MailGoogleComScope` for full Gmail access including delete permissions.
+
+Token files are auto-generated in `~/.config/gmover/tokens/` directory using format `token-{email}.json` after first authorization for each email address. Tokens automatically refresh and persist.
 
 ## CLI Usage Patterns
 
@@ -84,18 +91,24 @@ Token files are auto-generated in `~/.config/gmail-mover/tokens/` directory usin
 
 ### List Labels
 ```bash
-./bin/gmover -list-labels -src=user@gmail.com
+./bin/gmover list labels --src=user@gmail.com
 ```
 
-### Basic Transfer
+### Create and Run Job (Recommended)
 ```bash
-./bin/gmover -src=user@gmail.com -dst=archive@gmail.com -max=100
+# Create job interactively
+./bin/gmover job define move-newsletters
+
+# Run job with approval prompts
+./bin/gmover job run move-newsletters.json
+
+# Run job in dry-run mode
+./bin/gmover job run move-newsletters.json --dry-run
 ```
 
-### Advanced Filtering  
+### Direct Move (Legacy)
 ```bash
-./bin/gmover -src=user@gmail.com -dst=archive@gmail.com \
-  -src-label=INBOX -query="from:newsletter" -max=50 -dry-run
+./bin/gmover move --src=user@gmail.com --dst=archive@gmail.com --src-label=INBOX --dst-label=archived --max=100 --dry-run
 ```
 
 ### Job Configuration File Example
@@ -110,21 +123,37 @@ Token files are auto-generated in `~/.config/gmail-mover/tokens/` directory usin
   },
   "dst_account": {
     "email": "archive@gmail.com",
-    "apply_label": "archived-newsletters",
-    "create_label_if_missing": true
+    "apply_label": "archived-newsletters"
   },
   "options": {
     "dry_run": false,
-    "delete_after_move": false,
-    "fail_on_error": false,
-    "log_level": "info"
+    "delete_after_move": false
   }
 }
 ```
 
-### Code Patterns
+## Interactive Features
 
-#### Clear Path Style Functions
+### Message Approval
+- **Single character input**: Press Y/N/A/C without Enter (in real terminals)
+- **Graceful fallback**: Line input with Enter in non-TTY environments (IDE consoles)
+- **Ctrl-C handling**: Proper cancellation with atomic message operations
+- **Options**:
+  - `Y` - Approve this message
+  - `N` - Skip this message  
+  - `A` - Approve all remaining messages
+  - `C` - Cancel entire operation
+  - `Ctrl-C` - Cancel entire operation
+
+### Automatic Safety Features
+- **[Gmoved] label**: Automatically applied to all moved messages
+- **Label creation**: Missing labels are created automatically
+- **Atomic operations**: Ctrl-C waits for current message to complete
+- **Dry-run mode**: Preview operations safely
+
+## Code Patterns
+
+### Clear Path Style Functions
 ```go
 // All functions follow this pattern
 func GetGmailService(email string) (service *gmail.Service, err error) {
@@ -148,83 +177,73 @@ end:
 }
 ```
 
-#### Constructor Usage
+### Domain Types with Validation
 ```go
-// All types have constructors
-job, err := gmover.NewJob(gmover.JobOptions{
-    Name:     "My Job",
-    SrcEmail: "user@gmail.com",
-    DstEmail: "archive@gmail.com",
-    // ... other options
-})
+// Use domain types instead of strings
+var email gmover.EmailAddress = "user@gmail.com"
+var label gmover.LabelName = "INBOX"
+
+// Zero-value checking
+if email.IsZero() {
+    return fmt.Errorf("email is required")
+}
 ```
 
-#### Configuration API
+### Command Pattern
 ```go
-// Config with private fields and public methods
-config := gmover.NewConfig(gmover.MoveEmails)
-config.SetSrcEmail("user@gmail.com")
-config.SetDryRun(true)
+// Commands implement CommandHandler interface
+type MoveCmd struct {
+    *cliutil.CmdBase
+}
 
-// Access values through getters
-email := config.SrcEmail()
-isDryRun := config.DryRun()
+func (c *MoveCmd) Handle(ctx context.Context, config cliutil.Config, args []string) error {
+    // Implementation
+}
+
+// Registration in init()
+func init() {
+    cliutil.RegisterCommand(&MoveCmd{...})
+}
 ```
 
-#### Logger Setup (Required)
+### Logger Setup (Required)
 ```go
-// Must set logger before using gmover/gapi packages
+// Must set logger before using packages
 handler := NewCLIHandler()  // Custom CLI-friendly handler
 logger := slog.New(handler)
-gmover.SetLogger(logger)
-gapi.SetLogger(logger)
+gmover.Initialize(&gmover.Opts{Logger: logger})
 ```
 
-#### Job Execution Flow
-1. Parse CLI flags using standard flag package  
-2. Create config with gmover.NewConfig(gmover.ShowHelp) (default mode)
-3. Determine run mode based on flags:
-   - `-list-labels` → ListLabels mode
-   - `-job FILE` → MoveEmails mode  
-   - `-dst EMAIL` → MoveEmails mode
-   - No special flags → ShowHelp mode (default)
-4. Set config values via setters and pass config pointer to gmover.Run(&config)
-5. Configuration validation occurs before execution
-6. Job creation and execution handled internally based on mode
-
-#### Error Handling
-- Clear Path style with single exit point via `goto end`
-- Configurable continue-on-error behavior
-- Graceful handling for individual message failures
-- Named return variables for consistent error propagation
+### File Store Usage
+```go
+// Centralized config file management
+store := gmcfg.NewFileStore("gmover")
+err := store.Save("config.json", configData)
+err = store.Load("config.json", &configData)
+exists := store.Exists("config.json")
+```
 
 ## Implemented Features
 
-- **Three Operation Modes**: ShowHelp (default), ListLabels, and MoveEmails
-- **Safe Default Behavior**: Help mode prevents accidental destructive operations
-- **Configuration Validation**: Early validation with helpful error messages  
-- **CLI Flags**: Full support for source/dest emails, labels, queries, limits
-- **Job Configuration**: JSON-based job files for complex configurations
-- **Filtering**: Label-based, Gmail query syntax, date range filtering
-- **Dry-Run Mode**: Preview operations without actually moving messages
-- **Label Management**: Apply labels to moved messages, list available labels
-- **Delete After Move**: Optional deletion from source after successful transfer
-- **Error Handling**: Configurable continue-on-error behavior
-
-## Planned Features (Future)
-
-- SQLite logging for deduplication
-- Label creation if missing
-- Batch operations for improved performance
-- More advanced date filtering options
+- **Command System**: Extensible command pattern with job management
+- **Interactive Approval**: Single-character input with terminal fallbacks
+- **Automatic Safety**: [Gmoved] labels and atomic operations
+- **OAuth2 Flow**: Guided credential setup with automatic token refresh
+- **Pagination**: Handle >500 messages via Gmail API pagination
+- **Label Management**: Automatic label creation and application
+- **Dry-Run Mode**: Safe preview of operations
+- **Job Configuration**: JSON-based job files with validation
+- **Terminal Handling**: Raw mode with graceful fallbacks for IDE consoles
+- **Error Recovery**: Proper error detection and user-friendly messaging
+- **Filesystem Sandboxing**: Secure config file access with `io/fs.Sub`
 
 ## Dependencies
 
 - `golang.org/x/oauth2`: OAuth2 authentication  
+- `golang.org/x/term`: Terminal control for single-character input
 - `google.golang.org/api/gmail/v1`: Gmail API client (isolated in gapi package)
-- Go standard library: `flag` for CLI parsing, `log/slog` for logging
+- Go standard library: Enhanced with domain types and clear patterns
 - No external CLI frameworks - keeps dependencies minimal
-- Follows single major third-party feature package per package rule
 
 ## Coding Standards
 
@@ -236,6 +255,8 @@ This codebase follows Clear Path style guidelines:
 - **Unique package names** to avoid ecosystem conflicts
 - **Constructor functions** for all types (New*() pattern)
 - **No `else` statements** - use helper functions or `goto end` instead
+- **Domain types** instead of primitive strings for type safety
+- **Comments describe code state, not development process** - Never reference conversations, chat sessions, or implementation changes in code comments
 
 ## Build Standards
 
@@ -245,55 +266,43 @@ This codebase follows Clear Path style guidelines:
 
 ## Testing Notes
 
-Integration tests exist in `test/` directory:
-- Tests use `setupTestLogger()` helper to initialize required loggers
-- Tests verify Config getter/setter methods, job creation, and run logic
-- Most tests fail gracefully on auth errors (expected without credentials)
-- Use `-dry-run` flag for safe testing without actual Gmail operations
+Integration tests in `test/` directory:
+- Tests verify command system, job creation, and configuration
+- Tests use proper logger setup and Clear Path style
+- Most tests gracefully handle auth errors (expected without credentials)
+- Use `--dry-run` flag for safe testing without actual Gmail operations
 
 Manual testing requires:
 - Gmail accounts with API access
-- Valid OAuth2 credentials in `credentials.json` 
+- OAuth2 credentials (guided setup on first run)
 - Test messages in source account for specified labels
 
-When adding tests, ensure they follow Clear Path style and call `setupTestLogger()` before using gmover/gapi packages.
+## Recent Major Changes
 
-## TODO List
+### Completed
+- ✅ **Command System**: Implemented extensible command pattern
+- ✅ **Interactive Approval**: Single-character input with Ctrl-C handling
+- ✅ **Automatic Labels**: [Gmoved] label added to all moved messages
+- ✅ **OAuth Improvements**: Full scope access and automatic token refresh
+- ✅ **Pagination**: Gmail API pagination for >500 messages
+- ✅ **Label Creation**: Automatic creation of missing labels
+- ✅ **Terminal Handling**: Raw mode with IDE console fallbacks
+- ✅ **Guided Setup**: Interactive OAuth2 credential setup
+- ✅ **File Store**: Centralized config management with security
+- ✅ **Atomic Operations**: Ctrl-C protection for message integrity
 
-### High Priority
-- [ ] Fix Job.Execute() to pass full configuration to gapi.TransferMessagesWithOpts (architectural concern #1)
+### Current Bugs/TODOs
+- [ ] Fix log level bug in gapi/transfer.go (Error should be Info)
+- [ ] Fix MaxMessages bug in gmover/src_account.go:30 (not being set)
 - [ ] Fix flag logic bug in cmd/main.go listLabels check
-- [ ] Fix log level bug in gapi/transfer.go:133 (Error should be Info)  
-- [ ] Fix MaxMessages not being set in gmover/src_account.go:30
-
-### Medium Priority
-- [ ] Add comprehensive integration tests for gmover/gapi interaction
-
-### Implementation Details
-
-#### applyLabels Function (gapi/labels.go:50)
-The `applyLabels` function currently contains `panic("IMPLEMENT ME")` and needs proper implementation:
-
-**Requirements:**
-1. Check if the specified label exists in the destination Gmail account
-2. Create the label if it doesn't exist (based on job config `CreateLabelIfMissing` flag)
-3. Apply the label(s) to the specified message using Gmail API
-4. Handle errors gracefully (don't panic on missing labels if creation is disabled)
-
-**Gmail API Reference:**
-- `service.Users.Labels.List()` - to check existing labels
-- `service.Users.Labels.Create()` - to create new labels if needed  
-- `service.Users.Messages.Modify()` - to apply labels to messages
-
-**Current Usage:**
-Called from `gapi/transfer.go:119` during message transfer when `opts.LabelsToApply` is not empty.
-
-**Error Handling:**
-Should follow Clear Path style with `goto end` pattern and return meaningful errors for debugging.
-
-### Low Priority / Future
+- [ ] Move signal handling from cmd/main.go to gmover.Initialize()
+- [ ] Add comprehensive integration tests for new command system
 - [ ] Consider making MaxMessages part of TransferOpts instead of global variable
-- SQLite logging for deduplication
-- Label creation if missing
-- Batch operations for improved performance
-- More advanced date filtering options
+
+## Security Notes
+
+- **OAuth2 Scopes**: Uses `gmail.MailGoogleComScope` for full Gmail access
+- **File Access**: Sandboxed to config directory using `io/fs.Sub`
+- **Token Storage**: Secure per-email token files with automatic refresh
+- **Input Validation**: Domain types prevent invalid email/label values
+- **Error Handling**: No sensitive data in error messages

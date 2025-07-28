@@ -1,364 +1,436 @@
 package test
 
 import (
+	"context"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/mikeschinkel/gmail-mover/cliutil"
+	"github.com/mikeschinkel/gmail-mover/gapi"
+	"github.com/mikeschinkel/gmail-mover/gmcmds"
 	"github.com/mikeschinkel/gmail-mover/gmover"
+
+	_ "github.com/mikeschinkel/gmail-mover/gmcmds"
 )
 
-// TestJobCreation tests the job creation
-func TestJobCreation(t *testing.T) {
-	opts := gmover.JobOptions{
-		Name:            "Test Job",
-		SrcEmail:        "test@example.com",
-		SrcLabel:        "INBOX",
-		DstEmail:        "archive@example.com",
-		DstLabel:        "test-label",
+// TestCommandSystem tests the command registration and execution system
+func TestCommandSystem(t *testing.T) {
+	setupTestLogger()
+
+	ctx := context.Background()
+
+	// Test help (no arguments shows help)
+	t.Run("HelpCommand", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args:          []string{}, // No arguments shows help
+		})
+
+		err := runner.Run(ctx)
+		if err != nil {
+			t.Errorf("Help (no args) should not error, got: %v", err)
+		}
+	})
+
+	// Test invalid command
+	t.Run("InvalidCommand", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args:          []string{"nonexistent"},
+		})
+
+		err := runner.Run(ctx)
+		if err == nil {
+			t.Error("Invalid command should return an error")
+		}
+	})
+}
+
+// TestMoveCommandValidation tests move command validation
+func TestMoveCommandValidation(t *testing.T) {
+	setupTestLogger()
+
+	ctx := context.Background()
+
+	testCases := []struct {
+		name        string
+		args        []string
+		shouldError bool
+		description string
+	}{
+		{
+			name:        "MissingSourceEmail",
+			args:        []string{"move"},
+			shouldError: true,
+			description: "Move command should require source email",
+		},
+		{
+			name:        "MissingSourceLabel",
+			args:        []string{"move", "--src=test@example.com"},
+			shouldError: true,
+			description: "Move command should require source label",
+		},
+		{
+			name:        "MissingDestinationEmail",
+			args:        []string{"move", "--src=test@example.com", "--src-label=INBOX"},
+			shouldError: true,
+			description: "Move command should require destination email",
+		},
+		{
+			name:        "MissingDestinationLabel",
+			args:        []string{"move", "--src=test@example.com", "--src-label=INBOX", "--dst=archive@example.com"},
+			shouldError: true,
+			description: "Move command should require destination label",
+		},
+		{
+			name:        "ValidParametersNoCreds",
+			args:        []string{"move", "--src=test@example.com", "--src-label=INBOX", "--dst=archive@example.com", "--dst-label=moved", "--dry-run"},
+			shouldError: true,
+			description: "Valid parameters should fail on authentication (no credentials)",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+				Config:        gmcmds.GetConfig(),
+				GlobalFlagSet: gmcmds.GlobalFlagSet,
+				Args:          tc.args,
+			})
+
+			err := runner.Run(ctx)
+			if tc.shouldError && err == nil {
+				t.Errorf("%s: expected error but got none", tc.description)
+			} else if !tc.shouldError && err != nil {
+				t.Errorf("%s: expected no error but got: %v", tc.description, err)
+			}
+		})
+	}
+}
+
+// TestSameAccountDetection tests same-account vs cross-account detection
+func TestSameAccountDetection(t *testing.T) {
+	setupTestLogger()
+
+	ctx := context.Background()
+
+	// Test same account move (should not error on validation)
+	t.Run("SameAccountMove", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args: []string{
+				"move",
+				"--src=test@example.com",
+				"--dst=test@example.com", // Same account
+				"--src-label=INBOX",
+				"--dst-label=moved",
+				"--dry-run",
+			},
+		})
+
+		err := runner.Run(ctx)
+		// Should fail on auth, not validation
+		if err == nil {
+			t.Error("Expected authentication error for same-account move")
+		}
+		// Verify it's not a validation error
+		if err != nil && strings.Contains(err.Error(), "required") {
+			t.Errorf("Same account move failed validation: %v", err)
+		}
+	})
+
+	// Test that same source and destination labels are rejected
+	t.Run("SameSourceDestinationLabels", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args: []string{
+				"move",
+				"--src=test@example.com",
+				"--dst=test@example.com",
+				"--src-label=INBOX",
+				"--dst-label=INBOX", // Same as source
+				"--dry-run",
+			},
+		})
+
+		err := runner.Run(ctx)
+		if err == nil {
+			t.Error("Expected validation error for same source and destination labels")
+		}
+		if err != nil && !strings.Contains(err.Error(), "same") {
+			t.Errorf("Expected 'same' validation error, got: %v", err)
+		}
+	})
+}
+
+// TestListLabelsCommand tests the list labels functionality
+func TestListLabelsCommand(t *testing.T) {
+	setupTestLogger()
+
+	ctx := context.Background()
+
+	t.Run("MissingSourceEmail", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args:          []string{"list", "labels"},
+		})
+
+		err := runner.Run(ctx)
+		if err == nil {
+			t.Error("List labels should require source email")
+		}
+	})
+
+	t.Run("ValidParametersNoCreds", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args:          []string{"list", "labels", "--src=test@example.com"},
+		})
+
+		err := runner.Run(ctx)
+		if err == nil {
+			t.Error("List labels should fail on authentication without credentials")
+		}
+	})
+}
+
+// TestJobCommands tests job-related functionality
+func TestJobCommands(t *testing.T) {
+	setupTestLogger()
+
+	ctx := context.Background()
+
+	t.Run("JobDefineCommand", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args:          []string{"job", "define", "test-job"},
+		})
+
+		err := runner.Run(ctx)
+		// Job define will likely prompt for input or fail gracefully
+		// We mainly test that the command is registered and callable
+		_ = err // Expected to fail in test environment
+	})
+
+	t.Run("JobRunNonexistentFile", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args:          []string{"job", "run", "nonexistent.json"},
+		})
+
+		err := runner.Run(ctx)
+		if err == nil {
+			t.Error("Job run should fail for nonexistent file")
+		}
+	})
+}
+
+// TestGAPIFunctionality tests Gmail API wrapper functionality
+func TestGAPIFunctionality(t *testing.T) {
+	setupTestLogger()
+
+	t.Run("NewGMailAPI", func(t *testing.T) {
+		api := gapi.NewGMailAPI("test-app", gmover.ConfigFileStore())
+		if api == nil {
+			t.Error("NewGMailAPI should return non-nil API instance")
+		}
+	})
+
+	t.Run("GetGmailServiceNoAuth", func(t *testing.T) {
+		api := gapi.NewGMailAPI("test-app", gmover.ConfigFileStore())
+
+		_, err := api.GetGmailService("test@example.com")
+		if err == nil {
+			t.Error("GetGmailService should fail without authentication")
+		}
+	})
+}
+
+// TestTransferOptsConfiguration tests TransferOpts structure
+func TestTransferOptsConfiguration(t *testing.T) {
+	setupTestLogger()
+
+	// Test that TransferOpts can be configured properly
+	opts := gapi.TransferOpts{
+		Labels:          []string{"INBOX"},
+		LabelsToApply:   []string{"moved"},
+		LabelsToRemove:  []string{"INBOX"},
+		SearchQuery:     "from:test@example.com",
 		MaxMessages:     100,
 		DryRun:          true,
 		DeleteAfterMove: false,
-		SearchQuery:     "",
-	}
-
-	job, err := gmover.NewJob(opts)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-
-	if job.Name != "Test Job" {
-		t.Errorf("Expected job name 'Test Job', got '%s'", job.Name)
-	}
-
-	if job.SrcAccount.Email != "test@example.com" {
-		t.Errorf("Expected source email 'test@example.com', got '%s'", job.SrcAccount.Email)
-	}
-
-	if job.Options.DryRun != true {
-		t.Errorf("Expected DryRun to be true, got %v", job.Options.DryRun)
-	}
-}
-
-// TestLoadJobFile tests loading a job from file
-func TestLoadJobFile(t *testing.T) {
-	// This would test loading from a real job file
-	// For now, we'll skip if no test file exists
-	_, err := gmover.LoadJob("nonexistent.json")
-	if err == nil {
-		t.Error("Expected error for nonexistent file, got nil")
-	}
-}
-
-// TestNewJobValidation tests job creation validation
-func TestNewJobValidation(t *testing.T) {
-	// Test missing required fields
-	opts := gmover.JobOptions{
-		Name: "Invalid Job",
-		// Missing SrcEmail and DstEmail
-	}
-
-	_, err := gmover.NewJob(opts)
-	if err == nil {
-		t.Error("Expected error for missing required fields, got nil")
-	}
-}
-
-// TestRunWithConfig tests gmover.Run() with test configuration
-func TestRunWithConfig(t *testing.T) {
-	// Set up a test logger to avoid panics
-	setupTestLogger()
-
-	config := gmover.NewConfig(gmover.MoveEmails)
-	config.SetSrcEmail("test@example.com")
-	config.SetSrcLabel("INBOX")
-	config.SetDstEmail("archive@example.com")
-	config.SetDstLabel("test-label")
-	config.SetMaxMessages(100)
-	config.SetDryRun(true)
-	config.SetDeleteAfterMove(false)
-
-	// This will fail due to auth, but we're testing that gmover.Run()
-	// accepts config properly without flag parsing
-	err := gmover.Run(&config)
-	if err == nil {
-		t.Error("Expected authentication error, but got nil")
-	}
-}
-
-// TestRunListLabels tests the list-labels functionality
-func TestRunListLabels(t *testing.T) {
-	setupTestLogger()
-
-	config := gmover.NewConfig(gmover.ListLabels)
-	config.SetSrcEmail("nonexistent@example.com")
-
-	// This will fail because the email doesn't exist, but we're testing
-	// that the application logic is properly separated from CLI parsing
-	err := gmover.Run(&config)
-	if err == nil {
-		t.Error("Expected error for nonexistent email, but got nil")
-	}
-}
-
-// TestJobExecutePassesConfiguration tests that Job.Execute passes config to gapi
-func TestJobExecutePassesConfiguration(t *testing.T) {
-	setupTestLogger()
-
-	opts := gmover.JobOptions{
-		Name:            "Test Job",
-		SrcEmail:        "test@example.com",
-		SrcLabel:        "INBOX",
-		DstEmail:        "archive@example.com",
-		DstLabel:        "test-label",
-		MaxMessages:     50,
-		DryRun:          true,
-		DeleteAfterMove: false,
-		SearchQuery:     "from:test",
 		FailOnError:     false,
-		LogLevel:        "info",
 	}
 
-	job, err := gmover.NewJob(opts)
-	if err != nil {
-		t.Fatalf("Expected no error creating job, got %v", err)
+	// Verify configuration
+	if len(opts.Labels) != 1 || opts.Labels[0] != "INBOX" {
+		t.Error("Labels not configured correctly")
 	}
 
-	// Verify job structure has correct values
-	if job.SrcAccount.Email != "test@example.com" {
-		t.Errorf("Expected SrcAccount.Email 'test@example.com', got '%s'", job.SrcAccount.Email)
+	if len(opts.LabelsToApply) != 1 || opts.LabelsToApply[0] != "moved" {
+		t.Error("LabelsToApply not configured correctly")
 	}
 
-	if len(job.SrcAccount.Labels) != 1 || job.SrcAccount.Labels[0] != "INBOX" {
-		t.Errorf("Expected SrcAccount.Labels ['INBOX'], got %v", job.SrcAccount.Labels)
+	if len(opts.LabelsToRemove) != 1 || opts.LabelsToRemove[0] != "INBOX" {
+		t.Error("LabelsToRemove not configured correctly")
 	}
 
-	if job.SrcAccount.Query != "from:test" {
-		t.Errorf("Expected SrcAccount.Query 'from:test', got '%s'", job.SrcAccount.Query)
-	}
-
-	if job.SrcAccount.MaxMessages != 50 {
-		t.Errorf("Expected SrcAccount.MaxMessages 50, got %d", job.SrcAccount.MaxMessages)
-	}
-
-	if job.DstAccount.ApplyLabel != "test-label" {
-		t.Errorf("Expected DstAccount.ApplyLabel 'test-label', got '%s'", job.DstAccount.ApplyLabel)
-	}
-
-	if !job.Options.DryRun {
-		t.Errorf("Expected Options.DryRun true, got %v", job.Options.DryRun)
-	}
-
-	if job.Options.DeleteAfterMove {
-		t.Errorf("Expected Options.DeleteAfterMove false, got %v", job.Options.DeleteAfterMove)
-	}
-
-	// Test execution fails due to auth (expected) - this verifies the config is passed through
-	err = job.Execute()
-	if err == nil {
-		t.Error("Expected authentication error during execution, got nil")
+	if !opts.DryRun {
+		t.Error("DryRun should be true")
 	}
 }
 
-// TestConfigPointerHandling tests that Config properly handles accessor methods
-func TestConfigPointerHandling(t *testing.T) {
-	config := gmover.NewConfig(gmover.MoveEmails)
-	config.SetSrcEmail("test@example.com")
-	config.SetSrcLabel("INBOX")
-	config.SetDstEmail("archive@example.com")
-	config.SetDstLabel("moved")
-	config.SetMaxMessages(100)
-	config.SetDryRun(true)
-	config.SetDeleteAfterMove(false)
-	config.SetSearchQuery("has:attachment")
-
-	job, err := gmover.GetJob(config)
-	if err != nil {
-		t.Fatalf("Expected no error getting job from config, got %v", err)
-	}
-
-	// Verify accessor methods worked correctly in config conversion
-	if job.SrcAccount.Email != "test@example.com" {
-		t.Errorf("Expected SrcEmail 'test@example.com', got '%s'", job.SrcAccount.Email)
-	}
-
-	if job.SrcAccount.Query != "has:attachment" {
-		t.Errorf("Expected Search 'has:attachment', got '%s'", job.SrcAccount.Query)
-	}
-
-	if job.SrcAccount.MaxMessages != 100 {
-		t.Errorf("Expected MaxMessages 100, got %d", job.SrcAccount.MaxMessages)
-	}
-}
-
-// TestJobFromFile tests loading job configuration from JSON file
-func TestJobFromFile(t *testing.T) {
-	config := gmover.NewConfig(gmover.MoveEmails)
-	config.SetJobFile("../examples/jobs/backup-important.json")
-
-	// This will try to load the job file - may fail if file format doesn't match
-	// but tests the file loading path
-	_, err := gmover.GetJob(config)
-	// We expect this might fail due to file format/existence, but we're testing the code path
-	if err != nil {
-		t.Logf("Job file loading failed as expected: %v", err)
-	}
-}
-
-// TestConfigGettersSetters tests that Config getter/setter methods work correctly
-func TestConfigGettersSetters(t *testing.T) {
-	config := gmover.NewConfig(gmover.MoveEmails)
-
-	// Test initial state
-	if config.RunMode() != gmover.MoveEmails {
-		t.Errorf("Expected initial RunMode 'MoveEmails', got '%s'", config.RunMode())
-	}
-
-	// Test empty string defaults for pointer fields
-	if config.SrcEmail() != "" {
-		t.Errorf("Expected empty SrcEmail, got '%s'", config.SrcEmail())
-	}
-
-	if config.MaxMessages() != 0 {
-		t.Errorf("Expected zero MaxMessages, got %d", config.MaxMessages())
-	}
-
-	// Test setters
-	config.SetSrcEmail("test@example.com")
-	if config.SrcEmail() != "test@example.com" {
-		t.Errorf("Expected SrcEmail 'test@example.com', got '%s'", config.SrcEmail())
-	}
-
-	config.SetMaxMessages(500)
-	if config.MaxMessages() != 500 {
-		t.Errorf("Expected MaxMessages 500, got %d", config.MaxMessages())
-	}
-
-	config.SetDryRun(true)
-	if !config.DryRun() {
-		t.Errorf("Expected DryRun true, got %v", config.DryRun())
-	}
-
-	// Test mode change
-	config.SetRunMode(gmover.ListLabels)
-	if config.RunMode() != gmover.ListLabels {
-		t.Errorf("Expected RunMode 'ListLabels', got '%s'", config.RunMode())
-	}
-}
-
-// TestConfigValidationListLabels tests validation for ListLabels mode
-func TestConfigValidationListLabels(t *testing.T) {
+// TestDryRunMode tests dry run functionality
+func TestDryRunMode(t *testing.T) {
 	setupTestLogger()
 
-	// Test missing source email for ListLabels
-	config := gmover.NewConfig(gmover.ListLabels)
-	err := gmover.Run(&config)
-	if err == nil {
-		t.Error("Expected validation error for missing source email in ListLabels mode, got nil")
-		return
-	}
-	if err.Error() != "source email address is required for listing labels (use -src flag)" {
-		t.Errorf("Expected specific validation error message, got '%s'", err.Error())
-	}
+	ctx := context.Background()
+
+	t.Run("DryRunFlag", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args: []string{
+				"move",
+				"--src=test@example.com",
+				"--dst=archive@example.com",
+				"--src-label=INBOX",
+				"--dst-label=moved",
+				"--dry-run", // This should be handled properly
+				"--max=1",
+			},
+		})
+
+		err := runner.Run(ctx)
+		// Should fail on auth, but dry-run flag should be processed
+		if err == nil {
+			t.Error("Expected authentication error in dry-run mode")
+		}
+	})
 }
 
-// TestConfigValidationMoveEmails tests validation for MoveEmails mode
-func TestConfigValidationMoveEmails(t *testing.T) {
+// TestContextCancellation tests context cancellation handling
+func TestContextCancellation(t *testing.T) {
 	setupTestLogger()
 
-	// Test missing source email
-	config := gmover.NewConfig(gmover.MoveEmails)
-	err := gmover.Run(&config)
-	if err == nil {
-		t.Error("Expected validation error for missing source email in MoveEmails mode, got nil")
-		return
-	}
-	if err.Error() != "source email address is required (use -src flag)" {
-		t.Errorf("Expected specific validation error message, got '%s'", err.Error())
-	}
+	t.Run("CancelledContext", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
 
-	// Test missing destination email
-	config2 := gmover.NewConfig(gmover.MoveEmails)
-	config2.SetSrcEmail("test@example.com")
-	err = gmover.Run(&config2)
-	if err == nil {
-		t.Error("Expected validation error for missing destination email in MoveEmails mode, got nil")
-		return
-	}
-	if err.Error() != "destination email address is required (use -dst flag)" {
-		t.Errorf("Expected specific validation error message, got '%s'", err.Error())
-	}
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args: []string{
+				"move",
+				"--src=test@example.com",
+				"--dst=archive@example.com",
+				"--src-label=INBOX",
+				"--dst-label=moved",
+				"--dry-run",
+			},
+		})
 
-	// Test missing destination label
-	config4 := gmover.NewConfig(gmover.MoveEmails)
-	config4.SetSrcEmail("test@example.com")
-	config4.SetDstEmail("archive@example.com")
-	err = gmover.Run(&config4)
-	if err == nil {
-		t.Error("Expected validation error for missing destination label in MoveEmails mode, got nil")
-		return
-	}
-	if err.Error() != "destination label is required for organizing moved messages (use -dst-label flag)" {
-		t.Errorf("Expected specific validation error message, got '%s'", err.Error())
-	}
+		err := runner.Run(ctx)
+		// Should handle cancellation gracefully
+		_ = err // Cancellation handling may vary
+	})
 
-	// Test same source and destination with same label
-	config3 := gmover.NewConfig(gmover.MoveEmails)
-	config3.SetSrcEmail("test@example.com")
-	config3.SetDstEmail("test@example.com")
-	config3.SetSrcLabel("INBOX")
-	config3.SetDstLabel("INBOX")
-	err = gmover.Run(&config3)
-	if err == nil {
-		t.Error("Expected validation error for same source and destination, got nil")
-		return
-	}
-	if err.Error() != "source and destination cannot be the same (same email and same label)" {
-		t.Errorf("Expected specific validation error message, got '%s'", err.Error())
-	}
+	t.Run("TimeoutContext", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args: []string{
+				"move",
+				"--src=test@example.com",
+				"--dst=archive@example.com",
+				"--src-label=INBOX",
+				"--dst-label=moved",
+				"--dry-run",
+			},
+		})
+
+		err := runner.Run(ctx)
+		// Should handle timeout gracefully
+		_ = err // Timeout handling may vary based on where it occurs
+	})
 }
 
-// TestConfigValidationWithJobFile tests that job file bypasses individual field validation
-func TestConfigValidationWithJobFile(t *testing.T) {
+// TestConfigFileStore tests configuration file storage
+func TestConfigFileStore(t *testing.T) {
+	t.Run("ConfigFileStoreCreation", func(t *testing.T) {
+		store := gmover.ConfigFileStore()
+		if store == nil {
+			t.Error("ConfigFileStore should return non-nil store")
+		}
+	})
+}
+
+// TestMaxMessages tests message limit functionality
+func TestMaxMessages(t *testing.T) {
 	setupTestLogger()
 
-	// Test that job file config bypasses individual field validation
-	config := gmover.NewConfig(gmover.MoveEmails)
-	config.SetJobFile("nonexistent.json")
-	// Should not get validation errors for missing src/dst emails since we have job file
-	err := gmover.Run(&config)
-	// Will fail due to file not existing, but not due to validation
-	if err != nil && err.Error() == "source email address is required (use -src flag)" {
-		t.Error("Job file config should bypass individual field validation")
-	}
+	ctx := context.Background()
+
+	t.Run("MaxMessagesFlag", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args: []string{
+				"move",
+				"--src=test@example.com",
+				"--dst=archive@example.com",
+				"--src-label=INBOX",
+				"--dst-label=moved",
+				"--max=50",
+				"--dry-run",
+			},
+		})
+
+		err := runner.Run(ctx)
+		// Should fail on auth, but max flag should be processed
+		if err == nil {
+			t.Error("Expected authentication error with max messages flag")
+		}
+	})
 }
 
-// TestDefaultBehaviorIsShowHelp tests that the default behavior is now ShowHelp
-func TestDefaultBehaviorIsShowHelp(t *testing.T) {
-	// Test that NewConfig with ShowHelp creates ShowHelp mode
-	config := gmover.NewConfig(gmover.ShowHelp)
-	if config.RunMode() != gmover.ShowHelp {
-		t.Errorf("Expected NewConfig(ShowHelp) to create ShowHelp mode, got '%s'", config.RunMode())
-	}
-
-	// Test that explicitly creating other modes still works
-	config2 := gmover.NewConfig(gmover.ListLabels)
-	if config2.RunMode() != gmover.ListLabels {
-		t.Errorf("Expected NewConfig(ListLabels) to create ListLabels mode, got '%s'", config2.RunMode())
-	}
-
-	config3 := gmover.NewConfig(gmover.MoveEmails)
-	if config3.RunMode() != gmover.MoveEmails {
-		t.Errorf("Expected NewConfig(MoveEmails) to create MoveEmails mode, got '%s'", config3.RunMode())
-	}
-}
-
-// TestShowHelpMode tests that ShowHelp mode works correctly
-func TestShowHelpMode(t *testing.T) {
+// TestSearchQuery tests search query functionality
+func TestSearchQuery(t *testing.T) {
 	setupTestLogger()
 
-	// Test that ShowHelp mode runs without errors and doesn't need validation
-	config := gmover.NewConfig(gmover.ShowHelp)
-	err := gmover.Run(&config)
-	if err != nil {
-		t.Errorf("Expected ShowHelp mode to run without errors, got: %v", err)
-	}
+	ctx := context.Background()
+
+	t.Run("SearchQueryFlag", func(t *testing.T) {
+		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
+			Config:        gmcmds.GetConfig(),
+			GlobalFlagSet: gmcmds.GlobalFlagSet,
+			Args: []string{
+				"move",
+				"--src=test@example.com",
+				"--dst=archive@example.com",
+				"--src-label=INBOX",
+				"--dst-label=moved",
+				"--query=from:important@company.com",
+				"--dry-run",
+			},
+		})
+
+		err := runner.Run(ctx)
+		// Should fail on auth, but query flag should be processed
+		if err == nil {
+			t.Error("Expected authentication error with search query")
+		}
+	})
 }

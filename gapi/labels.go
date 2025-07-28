@@ -116,3 +116,90 @@ func applyLabels(service *gmail.Service, messageID string, labels []string) (err
 end:
 	return err
 }
+
+// modifyLabels adds and removes labels from a message in a single operation
+func modifyLabels(service *gmail.Service, messageID string, labelsToAdd, labelsToRemove []string) (err error) {
+	var addLabelIDs, removeLabelIDs []string
+	var labelName string
+	var labelID string
+	var existingLabels []*gmail.Label
+	var existingLabel *gmail.Label
+	var createLabelReq *gmail.Label
+	var newLabel *gmail.Label
+
+	ensureLogger()
+
+	if len(labelsToAdd) == 0 && len(labelsToRemove) == 0 {
+		goto end
+	}
+
+	// Get existing labels to find IDs
+	existingLabels, err = listLabels(service, "me")
+	if err != nil {
+		goto end
+	}
+
+	// Convert label names to IDs for labels to add, creating labels if they don't exist
+	for _, labelName = range labelsToAdd {
+		labelID = ""
+
+		// Find existing label
+		for _, existingLabel = range existingLabels {
+			if existingLabel.Name == labelName {
+				labelID = existingLabel.Id
+				break
+			}
+		}
+
+		// Create label if it doesn't exist
+		if labelID == "" {
+			logger.Info("Creating new label", "label", labelName)
+			createLabelReq = &gmail.Label{
+				Name:                  labelName,
+				MessageListVisibility: "show",
+				LabelListVisibility:   "labelShow",
+			}
+
+			newLabel, err = service.Users.Labels.Create("me", createLabelReq).Do()
+			if err != nil {
+				logger.Error("Failed to create label", "label", labelName, "error", err)
+				goto end
+			}
+			labelID = newLabel.Id
+		}
+
+		addLabelIDs = append(addLabelIDs, labelID)
+	}
+
+	// Convert label names to IDs for labels to remove
+	for _, labelName = range labelsToRemove {
+		labelID = ""
+
+		// Find existing label
+		for _, existingLabel = range existingLabels {
+			if existingLabel.Name == labelName {
+				labelID = existingLabel.Id
+				break
+			}
+		}
+
+		if labelID != "" {
+			removeLabelIDs = append(removeLabelIDs, labelID)
+		}
+	}
+
+	// Modify the message labels
+	_, err = service.Users.Messages.Modify("me", messageID, &gmail.ModifyMessageRequest{
+		AddLabelIds:    addLabelIDs,
+		RemoveLabelIds: removeLabelIDs,
+	}).Do()
+	if err != nil {
+		logger.Error("Failed to modify labels", "message_id", messageID, "add_labels", labelsToAdd, "remove_labels", labelsToRemove, "error", err)
+		goto end
+	}
+
+	logger.Info("Modified labels on message", "message_id", messageID, "added", labelsToAdd, "removed", labelsToRemove)
+
+end:
+	return err
+}

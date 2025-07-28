@@ -1,4 +1,4 @@
-module github.com/mikeschinkel/gmail-mover/cmd
+module github.com/mikeschinkel/gmail-mover/gmover-cli
 
 go 1.24.5
 

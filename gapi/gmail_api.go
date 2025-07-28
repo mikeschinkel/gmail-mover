@@ -5,33 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
 )
-
-// MessageInfo contains details about a message for approval decisions
-type MessageInfo struct {
-	Subject string
-	From    string
-	To      string
-	Date    time.Time
-	Id      string
-}
-
-func (info MessageInfo) String() string {
-	return fmt.Sprintf("Id: %s, Subject: %s, From: %s", info.Id, info.Subject, info.From)
-}
-
-// FileStorer provides file operations for Gmail API
-type FileStorer interface {
-	Load(filename string, data any) error
-	Save(filename string, data any) error
-	Exists(filename string) bool
-}
 
 // GMailAPI provides Gmail API operations for a specific app configuration
 type GMailAPI struct {
