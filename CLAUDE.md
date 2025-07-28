@@ -51,7 +51,7 @@ The codebase follows a clean multi-package structure with unique, branded packag
 go mod tidy
 
 # Build binary (ALWAYS build to ./bin/ directory)
-go build -o bin/gmover ./cmd/
+go build -o bin/gmover ./cmd/gmover-cli/
 
 # Show help (default behavior)
 ./bin/gmover
@@ -60,7 +60,7 @@ go build -o bin/gmover ./cmd/
 ./bin/gmover job run my-job.json --dry-run
 
 # List available labels for an account
-./bin/gmover list labels --src=user@gmail.com
+./bin/gmover list --src=user@gmail.com
 
 # Create a new job interactively
 ./bin/gmover job define move-emails
@@ -91,7 +91,7 @@ Token files are auto-generated in `~/.config/gmover/tokens/` directory using for
 
 ### List Labels
 ```bash
-./bin/gmover list labels --src=user@gmail.com
+./bin/gmover list --src=user@gmail.com
 ```
 
 ### Create and Run Job (Recommended)
@@ -260,7 +260,7 @@ This codebase follows Clear Path style guidelines:
 
 ## Build Standards
 
-- **ALWAYS build executables to `./bin/` directory**: `go build -o bin/gmover ./cmd/`
+- **ALWAYS build executables to `./bin/` directory**: `go build -o bin/gmover ./cmd/gmover-cli/`
 - **NEVER build to project root** - keeps the root directory clean
 - **Use `./bin/gmover` for all testing and examples**
 

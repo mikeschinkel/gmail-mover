@@ -37,7 +37,7 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
    # Clone and build (ALWAYS build to ./bin/ directory)
    git clone <repository-url>
    cd gmail-mover
-   go build -o bin/gmover ./cmd/
+   go build -o bin/gmover ./cmd/gmover-cli/
    ```
 
 ### 2. Basic Usage
@@ -47,14 +47,12 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
 ./bin/gmover
 ```
 
-**Guided OAuth setup (first time):**
-```bash
-./bin/gmover setup
-```
+**First-time OAuth setup:**
+On first use, you'll be guided through the OAuth setup automatically when you try to access Gmail.
 
 **List available labels for an account:**
 ```bash
-./bin/gmover list-labels -src=your-email@gmail.com
+./bin/gmover list --src=your-email@gmail.com
 ```
 
 **Interactive transfer with approval (recommended):**
@@ -77,10 +75,9 @@ Gmail Mover uses a command-based interface:
 | Command | Usage | Description |
 |---------|-------|-------------|
 | **help** | `./bin/gmover` or `./bin/gmover help` | Shows usage information and examples |
-| **setup** | `./bin/gmover setup` | Guided OAuth2 credentials setup |
-| **list-labels** | `./bin/gmover list-labels -src=EMAIL` | Lists available labels for the specified account |
+| **list** | `./bin/gmover list --src=EMAIL` | Lists available labels for the specified account |
 | **move** | `./bin/gmover move -src=EMAIL -dst=EMAIL` | Interactive email transfer with approval |
-| **job** | `./bin/gmover job -file=CONFIG.json` | Execute batch operations from JSON config |
+| **job** | `./bin/gmover job define` or `./bin/gmover job run` | Create or execute job files |
 
 ### Common Options
 
@@ -146,27 +143,21 @@ For complex or repeated operations, use JSON job files:
 }
 ```
 
-Run with: `./bin/gmover job -file=newsletter-archive.json`
+Run with: `./bin/gmover job run newsletter-archive.json`
 
 ## Authentication
 
-### Guided Setup
+### Automatic Setup
 
-Use the setup command for easy OAuth configuration:
+Gmail Mover provides guided OAuth configuration on first use. When you first run a command that requires Gmail access, it will:
 
-```bash
-./bin/gmover setup
-```
+1. **Prompt for Credentials**: Guide you through pasting your OAuth2 credentials JSON
+2. **Account Authorization**: Automatically open browser for account authorization  
+3. **Token Management**: Handle token refresh and storage automatically
 
-This will guide you through:
+### Authorization Process
 
-1. **Credentials Setup**: Download and save your OAuth2 credentials
-2. **Account Authorization**: Authorize each Gmail account you want to use
-3. **Token Management**: Automatic token refresh and storage
-
-### Manual Authorization
-
-On first use with each email account (if not using guided setup), you'll be prompted to:
+On first use with each email account, you'll be prompted to:
 
 1. Visit a Google authorization URL
 2. Grant permissions to Gmail Mover
@@ -217,14 +208,13 @@ Tokens are automatically saved in `~/.config/gmover/tokens/` for future use with
 ## Troubleshooting
 
 **"No credentials found" error:**
-- Run `./bin/gmover setup` for guided credential setup
-- Or manually ensure `credentials.json` is saved as `~/.config/gmover/credentials.json`
-- Verify the file contains valid OAuth2 credentials from Google Cloud Console
+- Run any command that accesses Gmail to trigger guided credential setup
+- Paste your OAuth2 credentials JSON when prompted
+- Verify the file contains valid OAuth2 credentials from Google Cloud Console  
 - The directory `~/.config/gmover/` will be created automatically
 
 **"Authentication required" error:**
-- Use `./bin/gmover setup` for guided authorization  
-- Or run the command and follow the OAuth flow
+- Run the command and follow the guided OAuth flow
 - Check that tokens are being saved in `~/.config/gmover/tokens/` directory
 
 **Rate limiting:**
@@ -260,7 +250,7 @@ cd gmail-mover
 go mod tidy
 
 # Build (ALWAYS build to ./bin/ directory)
-go build -o bin/gmover ./cmd/
+go build -o bin/gmover ./cmd/gmover-cli/
 
 # Run tests
 go test ./test/ -v
