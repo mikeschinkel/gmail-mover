@@ -135,7 +135,7 @@ func findBestCmdMatch(args []string) (path string, remainingArgs []string) {
 
 // ShowMainHelp displays the main help screen
 func ShowMainHelp() (err error) {
-	fmt.Printf(`Gmail Mover - Move emails between Gmail accounts and labels
+	Printf(`Gmail Mover - Move emails between Gmail accounts and labels
 
 USAGE:
     gmover <command> [subcommand] [options]
@@ -151,10 +151,10 @@ COMMANDS:
 		if len(subCmds) > 0 {
 			subCmdText = fmt.Sprintf(" [%s]", subCmds[0].Name()) // Show first subcommand as example
 		}
-		fmt.Printf("    %-20s %s\n", cmd.Name()+subCmdText, cmd.Description())
+		Printf("    %-20s %s\n", cmd.Name()+subCmdText, cmd.Description())
 	}
 
-	fmt.Printf(`
+	Printf(`
 EXAMPLES:
     # Show help for a specific command
     gmover help list
@@ -186,13 +186,13 @@ func ShowCmdHelp(cmdName string) (err error) {
 		goto end
 	}
 
-	fmt.Printf("Usage: %s\n\n%s\n", cmd.Usage(), cmd.Description())
+	Printf("Usage: %s\n\n%s\n", cmd.Usage(), cmd.Description())
 
 	subCmds = GetSubCmds(cmdName)
 	if len(subCmds) > 0 {
-		fmt.Printf("\nSubcommands:\n")
+		Printf("\nSubcommands:\n")
 		for _, subCmd := range subCmds {
-			fmt.Printf("    %-12s %s\n", subCmd.Name(), subCmd.Description())
+			Printf("    %-12s %s\n", subCmd.Name(), subCmd.Description())
 		}
 	}
 

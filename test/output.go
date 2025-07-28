@@ -6,64 +6,66 @@ import (
 	"sync"
 
 	"github.com/mikeschinkel/gmail-mover/cliutil"
+	"github.com/mikeschinkel/gmail-mover/gapi"
 )
 
-// TestOutput captures output for testing
+// TestOutput captures output for testing with goroutine isolation
 type TestOutput struct {
-	buffer *bytes.Buffer
-	mu     sync.Mutex
+	buffers sync.Map // map[int64]*bytes.Buffer
+	mu      sync.Mutex
 }
 
-// NewTestOutput creates a test output writer
-func NewTestOutput() *TestOutput {
-	return &TestOutput{
-		buffer: &bytes.Buffer{},
+// InitTestOutput creates a test output writer
+func InitTestOutput() *TestOutput {
+	output := &TestOutput{}
+	cliutil.SetOutput(output)
+	gapi.SetOutput(output)
+	return output
+}
+
+// getBuffer returns the buffer for the current goroutine
+func (t *TestOutput) getBuffer() *bytes.Buffer {
+	id := GoID()
+	if buf, ok := t.buffers.Load(id); ok {
+		return buf.(*bytes.Buffer)
 	}
+
+	// Create new buffer for this goroutine
+	newBuf := &bytes.Buffer{}
+	t.buffers.Store(id, newBuf)
+	return newBuf
 }
 
 // Printf captures formatted output
 func (t *TestOutput) Printf(format string, args ...interface{}) {
+	buf := t.getBuffer()
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	fprintf(t.buffer, format, args...)
+	fprintf(buf, format, args...)
 }
 
 // Errorf captures formatted error output
 func (t *TestOutput) Errorf(format string, args ...interface{}) {
+	buf := t.getBuffer()
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	fprintf(t.buffer, format, args...)
+	fprintf(buf, format, args...)
 }
 
-// GetOutput returns captured output
+// GetOutput returns captured output for the current goroutine
 func (t *TestOutput) GetOutput() string {
-	return t.buffer.String()
+	buf := t.getBuffer()
+	return buf.String()
 }
 
-// ClearOutput clears captured output
+// ClearOutput clears captured output for the current goroutine
 func (t *TestOutput) ClearOutput() {
-	t.buffer.Reset()
+	buf := t.getBuffer()
+	buf.Reset()
 }
 
-// ContainsOutput checks if output contains specific text
+// ContainsOutput checks if output contains specific text for the current goroutine
 func (t *TestOutput) ContainsOutput(text string) bool {
-	return strings.Contains(t.buffer.String(), text)
-}
-
-// Global test output instance
-var testOutput *TestOutput
-
-// SetupTestOutput creates and sets a test output writer
-func SetupTestOutput() *TestOutput {
-	testOutput = NewTestOutput()
-	cliutil.SetOutput(testOutput)
-	return testOutput
-}
-
-// GetTestOutput returns the global test output instance
-func GetTestOutput() *TestOutput {
-	if testOutput == nil {
-		panic("Test output not initialized - call SetupTestOutput() first")
-	}
-	return testOutput
+	buf := t.getBuffer()
+	return strings.Contains(buf.String(), text)
 }

@@ -43,10 +43,11 @@ var printMu sync.RWMutex
 var errorMu sync.RWMutex
 
 // SetOutput sets the global output writer (primarily for testing)
-func SetOutput(writer OutputWriter) {
+func SetOutput(writer OutputWriter) OutputWriter {
 	printMu.Lock()
 	defer printMu.Unlock()
 	output = writer
+	return output
 }
 
 // GetOutput returns the current output writer

@@ -38,7 +38,7 @@ end:
 
 // showMainHelp displays the main help screen
 func (c *HelpCmd) showMainHelp() {
-	fmt.Printf(`Gmail Mover - Move emails between Gmail accounts and labels
+	cliutil.Printf(`Gmail Mover - Move emails between Gmail accounts and labels
 
 USAGE:
     gmover <command> [subcommand] [options]
@@ -54,10 +54,10 @@ COMMANDS:
 		if len(subCmds) > 0 {
 			subCmdText = fmt.Sprintf(" [%s]", subCmds[0].Name()) // Show first subcommand as example
 		}
-		fmt.Printf("    %-20s %s\n", cmd.Name()+subCmdText, cmd.Description())
+		cliutil.Printf("    %-20s %s\n", cmd.Name()+subCmdText, cmd.Description())
 	}
 
-	fmt.Printf(`
+	cliutil.Printf(`
 EXAMPLES:
     # Show help for a specific command
     gmover help list

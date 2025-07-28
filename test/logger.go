@@ -19,14 +19,14 @@ type TestLogger struct {
 	mu     sync.RWMutex
 }
 
-// NewTestLogger creates a new test logger
-func NewTestLogger() *TestLogger {
+// NewTestLogHandler creates a new test logger
+func NewTestLogHandler() *TestLogger {
 	return &TestLogger{
 		buffer: &bytes.Buffer{},
 	}
 }
 
-// Handle implements slog.Handler interface
+// Enabled implements slog.Handler interface
 func (t *TestLogger) Enabled(_ context.Context, _ slog.Level) bool {
 	return true
 }
@@ -105,16 +105,19 @@ func (t *TestLogger) CountLogLevel(level slog.Level) int {
 }
 
 // Global test logger instance
-var testLogger *TestLogger
+var testLogHandler *TestLogger
+var testOutput *TestOutput
 
-// setupTestLogger creates a test logger and initializes gmover
-func setupTestLogger() {
-	testLogger = NewTestLogger()
-	logger := slog.New(testLogger)
+// setupTest creates a test logger and initializes gmover
+func setupTest() {
+	testLogHandler = NewTestLogHandler()
+	logger := slog.New(testLogHandler)
+	testOutput = InitTestOutput()
 
 	// Initialize gmover package
 	err := gmover.Initialize(&gmover.Opts{
 		Logger: logger,
+		Output: testOutput,
 	})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to initialize gmover: %v", err))
@@ -123,12 +126,4 @@ func setupTestLogger() {
 	// Set logger for other packages
 	gapi.SetLogger(logger)
 	gmcmds.SetLogger(logger)
-}
-
-// GetTestLogger returns the global test logger instance
-func GetTestLogger() *TestLogger {
-	if testLogger == nil {
-		panic("Test logger not initialized - call setupTestLogger() first")
-	}
-	return testLogger
 }

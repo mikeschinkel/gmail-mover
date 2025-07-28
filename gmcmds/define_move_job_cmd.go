@@ -2,7 +2,6 @@ package gmcmds
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/mikeschinkel/gmail-mover/cliutil"
 	"github.com/mikeschinkel/gmail-mover/gmjobs"
@@ -57,7 +56,7 @@ func (c *DefineMoveJobCmd) Handle(_ context.Context, config cliutil.Config, _ []
 		goto end
 	}
 
-	fmt.Printf("Job file created: %s\n", gmCfg.JobFile)
+	cliutil.Printf("Job file created: %s\n", gmCfg.JobFile)
 
 end:
 	return err

@@ -16,12 +16,16 @@ import (
 
 // TestCommandSystem tests the command registration and execution system
 func TestCommandSystem(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	ctx := context.Background()
 
 	// Test help (no arguments shows help)
 	t.Run("HelpCommand", func(t *testing.T) {
+		output := InitTestOutput()
+		cliutil.SetOutput(output)
+		defer output.ClearOutput()
+
 		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
 			Config:        gmcmds.GetConfig(),
 			GlobalFlagSet: gmcmds.GlobalFlagSet,
@@ -51,7 +55,7 @@ func TestCommandSystem(t *testing.T) {
 
 // TestMoveCommandValidation tests move command validation
 func TestMoveCommandValidation(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	ctx := context.Background()
 
@@ -95,6 +99,9 @@ func TestMoveCommandValidation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			output := InitTestOutput()
+			defer output.ClearOutput()
+
 			runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
 				Config:        gmcmds.GetConfig(),
 				GlobalFlagSet: gmcmds.GlobalFlagSet,
@@ -113,7 +120,7 @@ func TestMoveCommandValidation(t *testing.T) {
 
 // TestSameAccountDetection tests same-account vs cross-account detection
 func TestSameAccountDetection(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	ctx := context.Background()
 
@@ -170,7 +177,7 @@ func TestSameAccountDetection(t *testing.T) {
 
 // TestListLabelsCommand tests the list labels functionality
 func TestListLabelsCommand(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	ctx := context.Background()
 
@@ -203,7 +210,7 @@ func TestListLabelsCommand(t *testing.T) {
 
 // TestJobCommands tests job-related functionality
 func TestJobCommands(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	ctx := context.Background()
 
@@ -236,7 +243,9 @@ func TestJobCommands(t *testing.T) {
 
 // TestGAPIFunctionality tests Gmail API wrapper functionality
 func TestGAPIFunctionality(t *testing.T) {
-	setupTestLogger()
+	setupTest()
+	output := InitTestOutput()
+	defer output.ClearOutput()
 
 	t.Run("NewGMailAPI", func(t *testing.T) {
 		api := gapi.NewGMailAPI("test-app", gmover.ConfigFileStore())
@@ -257,7 +266,7 @@ func TestGAPIFunctionality(t *testing.T) {
 
 // TestTransferOptsConfiguration tests TransferOpts structure
 func TestTransferOptsConfiguration(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	// Test that TransferOpts can be configured properly
 	opts := gapi.TransferOpts{
@@ -291,7 +300,7 @@ func TestTransferOptsConfiguration(t *testing.T) {
 
 // TestDryRunMode tests dry run functionality
 func TestDryRunMode(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	ctx := context.Background()
 
@@ -320,7 +329,7 @@ func TestDryRunMode(t *testing.T) {
 
 // TestContextCancellation tests context cancellation handling
 func TestContextCancellation(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	t.Run("CancelledContext", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -379,7 +388,7 @@ func TestConfigFileStore(t *testing.T) {
 
 // TestMaxMessages tests message limit functionality
 func TestMaxMessages(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	ctx := context.Background()
 
@@ -408,7 +417,7 @@ func TestMaxMessages(t *testing.T) {
 
 // TestSearchQuery tests search query functionality
 func TestSearchQuery(t *testing.T) {
-	setupTestLogger()
+	setupTest()
 
 	ctx := context.Background()
 
