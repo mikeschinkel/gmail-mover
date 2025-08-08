@@ -1,0 +1,15 @@
+version: 2
+sql:
+- engine: "sqlite"
+  schema: "../internal/sqlc/schema.sql"
+  queries: "../internal/sqlc/query.sql"
+  gen:
+    go:
+      package: "sqlc"
+      out: "../internal/sqlc"
+      sql_package: "database/sql"
+      emit_json_tags: true
+      emit_interface: true
+      emit_prepared_queries: false
+      emit_exact_table_names: false
+      emit_empty_slices: false
