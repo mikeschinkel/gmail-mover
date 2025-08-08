@@ -1,4 +1,4 @@
-# ADR-004: Sync Concurrency, Batching, and Progress Semantics for Gmail → SQLite (with Separate Archiver)
+# ADR-007: Sync Concurrency, Batching, and Progress Semantics for Gmail → SQLite (with Separate Archiver)
 
 **Status:** Accepted (Draft for implementation)
 
@@ -8,8 +8,8 @@
 
 **Related ADRs:**
 
-* ADR-002: SQLite sharding strategy (referenced)
-* ADR-003: Gmail metadata storage (referenced)
+* ADR-005: SQLite sharding strategy (referenced)
+* ADR-006: Gmail metadata storage (referenced)
 
 > **Note on code**: All code herein is **illustrative** (pseudocode/Go-like) to make the design concrete. It is **not** normative. We will finalize implementation separately and align with house style (e.g., single return with `goto end`).
 
@@ -175,7 +175,7 @@ sequenceDiagram
 * **One writer per shard** to avoid contention; write via a single goroutine per shard.
 * **Small transactions** (100 msgs or 8–16 MB) to cap redo on crash and keep checkpoints fast.
 * **Idempotent upserts** keyed by Gmail `id` and RFC `Message-ID` (when absent, generate a stable surrogate). Keep both Gmail `id` & `threadId` for API ops and relational joins.
-* Works with ADR-002 sharding: router selects shard by policy (time/size), writer commits locally, reads can `ATTACH`/`UNION ALL` when needed.
+* Works with ADR-005 sharding: router selects shard by policy (time/size), writer commits locally, reads can `ATTACH`/`UNION ALL` when needed.
 
 ---
 
@@ -189,7 +189,7 @@ sequenceDiagram
 
 ### 5.6 Metadata Model (Account-Level)
 
-Minimal but sufficient, stored in the account and outside the archive DB (see ADR-003):
+Minimal but sufficient, stored in the account and outside the archive DB (see ADR-006):
 
 * `watermark`: highest fully-synced timestamp (exclusive).
 * `slices[]` (optional/ephemeral): status per slice (`start`, `end`, `totalJobs`, `doneJobs`, `badJobs`, `outstanding`), last heartbeat.
@@ -457,4 +457,4 @@ func (t *Tuner) Halve(){ t.mu.Lock(); if t.workers>t.minW {t.workers=max(t.minW,
 
 ---
 
-### End of ADR-004
+### End of ADR-007

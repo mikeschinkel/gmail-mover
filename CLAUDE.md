@@ -43,10 +43,13 @@ The codebase follows a clean multi-package structure with unique, branded packag
 4. **Consider creating new ADRs** for significant architectural decisions during development
 
 ### Current ADRs:
-- **ADR-001**: SQL Schema and Related Concepts - Comprehensive database design principles, message types, storage optimizations, and extensibility decisions
-- **ADR-002**: SQLite Sharding Strategy - Multi-database approach using `ATTACH DATABASE` for scaling email archives
-- **ADR-003**: Gmail Metadata Storage - Google Apps Script with PropertiesService for operational metadata and sync state
-- **ADR-004**: Sync Concurrency and Progress Semantics - Ordered Frontier Commit (OFC) pattern for reliable Gmail→SQLite synchronization with failure isolation
+- **ADR-001**: Go and Related Best Practices - Programming language choice, coding standards, architectural patterns, and tooling decisions
+- **ADR-002**: OAuth Configuration and Token Management Strategy - Single OAuth app approach, XDG-compliant config directory structure, and per-account token isolation
+- **ADR-003**: Email Date Preservation Using Gmail internalDate Parameter - Technical implementation for preserving original email chronology in transferred messages
+- **ADR-004**: SQL Schema and Related Concepts - Comprehensive database design principles, message types, storage optimizations, and extensibility decisions
+- **ADR-005**: SQLite Sharding Strategy - Multi-database approach using `ATTACH DATABASE` for scaling email archives
+- **ADR-006**: Gmail Metadata Storage - Google Apps Script with PropertiesService for operational metadata and sync state
+- **ADR-007**: Sync Concurrency and Progress Semantics - Ordered Frontier Commit (OFC) pattern for reliable Gmail→SQLite synchronization with failure isolation
 
 These ADRs establish the foundation for the project's evolution from a simple Gmail transfer tool to a comprehensive 360-degree personal information management system with SQLite-based archiving, AI-assisted classification, and multi-platform support.
 
@@ -329,6 +332,7 @@ Manual testing requires:
 - [ ] Move signal handling from cmd/main.go to gmover.Initialize()
 - [ ] Add comprehensive integration tests for new command system
 - [ ] Consider making MaxMessages part of TransferOpts instead of global variable
+- [ ] **Package Organization Review**: Decide what should be moved into `./internal/` (or moved out of it) and update all references in comments/markdown files - packages to consider: gapi, gmcfg, gmover internals, sqlc generated code, etc.
 
 ## Security Notes
 

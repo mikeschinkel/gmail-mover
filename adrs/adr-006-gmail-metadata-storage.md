@@ -1,4 +1,4 @@
-# ADR-002: Google Apps Script Execution API for Gmail Mover Metadata Storage
+# ADR-006: Google Apps Script Execution API for Gmail Mover Metadata Storage
 
 **Date:** 2025-08-06  
 **Status:** Accepted  
@@ -7,7 +7,7 @@
 ## Context
 
 The Gmail Mover project is envisioned as a comprehensive 360-degree personal information manager, with features to include transferring email messages between Gmail accounts, email archiving with SQLite storage, AI-assisted classification, intelligent automation, and future expansion to other messaging platforms (Slack, Teams, social media), documents (Google Docs, Office files), browser data, financial transactions, and more. The system requires persistent storage of operational metadata that includes:
-# ADR-002: Google Apps Script Execution API for Gmail Mover Metadata Storage
+# ADR-006: Google Apps Script Execution API for Gmail Mover Metadata Storage
 
 **Date:** 2025-08-06  
 **Status:** Accepted  

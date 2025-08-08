@@ -1,4 +1,4 @@
-# ADR-001: SQLite Sharding Strategy for Email Archival
+# ADR-005: SQLite Sharding Strategy for Email Archival
 
 ## Status
 
