@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## INCLUDE ../CLAUDE-*.md 
+
+**IMPORTANT**: Before working on this project, you MUST:
+
+1. **Check the parent directory** for files named `CLAUDE-*.md` (e.g., `CLAUDE-golang.md`, `CLAUDE-mcp-server-usage.md`)
+2. **Read all applicable files** based on your current tasks:
+   - For Go code: Read `CLAUDE-golang.md` for coding style requirements
+   - For project exploration: Read `CLAUDE-mcp-server-usage.md` for file system tool usage
+   - For other languages/topics: Read the relevant `CLAUDE-*.md` files
+3. **Follow those guidelines** in addition to the project-specific guidance below
+
+These parent-level files contain critical coding standards and tool usage patterns that apply across multiple projects.
+
+
 ## Project Overview
 
 **Status:** Active development - Core functionality implemented and working
@@ -18,6 +32,23 @@ The codebase follows a clean multi-package structure with unique, branded packag
 - **gmcmds package**: Command handlers implementing the command pattern
 - **gmcfg package**: Centralized configuration file management with filesystem sandboxing
 - **cliutil package**: CLI utilities, command registration, and terminal handling
+
+## Architecture Decision Records (ADRs)
+
+**IMPORTANT**: This project uses Architecture Decision Records (ADRs) in the `./adrs/` directory to document key architectural decisions. When working on this codebase, you MUST:
+
+1. **Read relevant ADRs** before making architectural changes or implementing new features
+2. **Follow the patterns and decisions** documented in existing ADRs
+3. **Consult ADRs when questions arise** about database schema, storage strategies, concurrency patterns, or metadata handling
+4. **Consider creating new ADRs** for significant architectural decisions during development
+
+### Current ADRs:
+- **ADR-001**: SQL Schema and Related Concepts - Comprehensive database design principles, message types, storage optimizations, and extensibility decisions
+- **ADR-002**: SQLite Sharding Strategy - Multi-database approach using `ATTACH DATABASE` for scaling email archives
+- **ADR-003**: Gmail Metadata Storage - Google Apps Script with PropertiesService for operational metadata and sync state
+- **ADR-004**: Sync Concurrency and Progress Semantics - Ordered Frontier Commit (OFC) pattern for reliable Gmail→SQLite synchronization with failure isolation
+
+These ADRs establish the foundation for the project's evolution from a simple Gmail transfer tool to a comprehensive 360-degree personal information management system with SQLite-based archiving, AI-assisted classification, and multi-platform support.
 
 ### Key Design Patterns
 
