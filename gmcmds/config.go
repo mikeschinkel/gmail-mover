@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/mikeschinkel/gmail-mover/cliutil"
+	"github.com/mikeschinkel/gmail-mover/gapi"
 	"github.com/mikeschinkel/gmail-mover/gmover"
 )
 
@@ -67,12 +68,12 @@ func (c *Config) GMoverConfig(args GMoverConfigArgs) (*gmover.Config, error) {
 	}
 
 	if c.SrcEmail != nil && *c.SrcEmail != "" {
-		config.SrcEmail, err = gmover.ParseEmailAddress(*c.SrcEmail)
+		config.SrcEmail, err = gapi.ParseEmailAddress(*c.SrcEmail)
 		errs = append(errs, err)
 	}
 
 	if c.DstEmail != nil && *c.DstEmail != "" {
-		config.DstEmail, err = gmover.ParseEmailAddress(*c.DstEmail)
+		config.DstEmail, err = gapi.ParseEmailAddress(*c.DstEmail)
 		errs = append(errs, err)
 	}
 

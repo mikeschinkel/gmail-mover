@@ -12,6 +12,8 @@ import (
 	"google.golang.org/api/option"
 )
 
+type EmailAddress string
+
 // OutputWriter defines the interface for user-facing output
 type OutputWriter interface {
 	Printf(format string, args ...interface{})
@@ -33,7 +35,7 @@ func NewGMailAPI(appConfigDir string, fileStore FileStorer) *GMailAPI {
 }
 
 // GetGmailService creates an authenticated Gmail service for the specified email
-func (api *GMailAPI) GetGmailService(email string) (service *gmail.Service, err error) {
+func (api *GMailAPI) GetGmailService(email EmailAddress) (service *gmail.Service, err error) {
 	var config *oauth2.Config
 	var token *oauth2.Token
 	var client *http.Client
@@ -126,7 +128,7 @@ end:
 	return config, err
 }
 
-func (api *GMailAPI) getToken(config *oauth2.Config, email string) (token *oauth2.Token, err error) {
+func (api *GMailAPI) getToken(config *oauth2.Config, email EmailAddress) (token *oauth2.Token, err error) {
 	var tokenFilename string
 
 	tokenFilename = fmt.Sprintf(TokenFileTemplate, email)

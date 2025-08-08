@@ -14,7 +14,7 @@ func (api *GMailAPI) ListLabels(email string) (err error) {
 
 	ensureLogger()
 
-	service, err = api.GetGmailService(email)
+	service, err = api.GetGmailService(EmailAddress(email))
 	if err != nil {
 		goto end
 	}

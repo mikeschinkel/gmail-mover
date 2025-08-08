@@ -31,21 +31,21 @@ type ApprovalFunc = func(context.Context, string) (ar approvalResponse, err erro
 
 // MoveLogEntry represents a single email move operation for JSON logging
 type MoveLogEntry struct {
-	Timestamp   time.Time `json:"timestamp"`
-	MessageID   string    `json:"msg_id"`
-	Subject     string    `json:"subject"`
-	Date        string    `json:"date"`
-	To          string    `json:"to"`
-	From        string    `json:"from"`
-	SrcEmail    string    `json:"src"`
-	DstEmail    string    `json:"dst"`
-	SrcLabels   []string  `json:"src_labels"`
-	DstLabels   []string  `json:"dst_labels"`
-	Moved       bool      `json:"moved"`
-	Deleted     bool      `json:"deleted"`
-	Labeled     bool      `json:"labeled"`
-	DateParsed  bool      `json:"date_parsed"`
-	Error       error     `json:"error,omitempty"`
+	Timestamp   time.Time    `json:"timestamp"`
+	MessageID   string       `json:"msg_id"`
+	Subject     string       `json:"subject"`
+	Date        string       `json:"date"`
+	To          string       `json:"to"`
+	From        string       `json:"from"`
+	SrcEmail    EmailAddress `json:"src"`
+	DstEmail    EmailAddress `json:"dst"`
+	SrcLabels   []string     `json:"src_labels"`
+	DstLabels   []string     `json:"dst_labels"`
+	Moved       bool         `json:"moved"`
+	Deleted     bool         `json:"deleted"`
+	Labeled     bool         `json:"labeled"`
+	DateParsed  bool         `json:"date_parsed"`
+	Error       error        `json:"error,omitempty"`
 	MessageInfo `json:"-"`
 }
 
@@ -72,7 +72,7 @@ type TransferOpts struct {
 }
 
 // TransferMessages handles the core message transfer logic
-func (api *GMailAPI) TransferMessages(ctx context.Context, srcEmail, dstEmail string, opts TransferOpts) (err error) {
+func (api *GMailAPI) TransferMessages(ctx context.Context, srcEmail, dstEmail EmailAddress, opts TransferOpts) (err error) {
 	var messageCount int
 	var label string
 	var messages []*gmail.Message
