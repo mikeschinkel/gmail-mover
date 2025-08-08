@@ -28,7 +28,7 @@ func main() {
 	// Initialize gmover package
 	err := gmover.Initialize(&gmover.Opts{
 		Logger: logger,
-		Output: cliutil.GetOutput(),
+		Output: cliutil.NewConsoleOutput(),
 	})
 	if err != nil {
 		logger.Error("Failed to initialize", "error", err)
