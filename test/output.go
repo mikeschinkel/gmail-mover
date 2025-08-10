@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mikeschinkel/gmail-mover/cliutil"
-	"github.com/mikeschinkel/gmail-mover/gapi"
+	"github.com/mikeschinkel/gmover/cliutil"
+	"github.com/mikeschinkel/gmover/gapi"
 )
 
 // TestOutput captures output for testing with goroutine isolation

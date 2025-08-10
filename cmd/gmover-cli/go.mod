@@ -1,8 +1,10 @@
-module github.com/mikeschinkel/gmail-mover/gmover-cli
+module github.com/mikeschinkel/gmover/gmover-cli
 
 go 1.24.5
 
-require github.com/mikeschinkel/gmail-mover v0.0.0-20250726115939-893d36f14753
+replace github.com/mikeschinkel/gmover => ../..
+
+require github.com/mikeschinkel/gmover v0.0.0-00010101000000-000000000000
 
 require (
 	cloud.google.com/go/auth v0.16.3 // indirect

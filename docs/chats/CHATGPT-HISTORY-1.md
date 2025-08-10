@@ -716,7 +716,7 @@ Uploads it to the destination Gmail account
 pgsql
 Copy
 Edit
-gmail-mover/
+gmover/
 ├── main.go
 ├── auth/
 │   └── auth.go
@@ -828,8 +828,8 @@ import (
 "log"
 "time"
 
-	"gmail-mover/auth"
-	"gmail-mover/mover"
+	"gmover/auth"
+	"gmover/mover"
 )
 
 func main() {
@@ -1244,8 +1244,8 @@ package main
 import (
 	"context"
 	"log"
-	"gmail-mover/auth"
-	"gmail-mover/mover"
+	"gmover/auth"
+	"gmover/mover"
 )
 
 func main() {
@@ -1372,7 +1372,7 @@ Summary report of moved messages (e.g., from, subject, size)
 Support for batch operations via Gmail API batch mode
 
 Directory and File Layout
-gmail-mover/
+gmover/
 ├── main.go                  # CLI entry point
 ├── auth/
 │   └── auth.go              # OAuth2 loading, token management, manual authorization

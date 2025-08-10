@@ -1,4 +1,4 @@
-module github.com/mikeschinkel/gmail-mover
+module github.com/mikeschinkel/gmover
 
 go 1.24
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/mikeschinkel/gmail-mover/cliutil"
+	"github.com/mikeschinkel/gmover/cliutil"
 )
 
 // HelpCmd handles showing help information
@@ -73,6 +73,6 @@ EXAMPLES:
     gmover job define daily-archive.json --src=user@example.com --dst=archive@example.com
     gmover job run daily-archive.json --auto-confirm
 
-For more information, visit: https://github.com/mikeschinkel/gmail-mover
+For more information, visit: https://github.com/mikeschinkel/gmover
 `)
 }

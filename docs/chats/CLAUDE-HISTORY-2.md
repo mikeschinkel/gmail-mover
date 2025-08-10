@@ -10,7 +10,7 @@ Go to Google Cloud Console:
 Visit https://console.cloud.google.com/
 Sign in with your Google account
 Create or Select a Project:
-If you don't have a project: Click "Create Project" and give it a name like "gmail-mover"
+If you don't have a project: Click "Create Project" and give it a name like "gmover"
 If you have existing projects: Use the project dropdown at the top to select one
 Enable the Gmail API:
 In the left sidebar, go to "APIs & Services" → "Library"
@@ -29,7 +29,7 @@ Choose "Desktop Application" as the application type
 Give it a name like "Gmail Mover CLI"
 Download the generated JSON file and save it as credentials.json in your project root
 Set up the project structure (if not already done):
-gmail-mover/
+gmover/
 ├── credentials.json  ← Your downloaded file goes here
 ├── tokens/          ← Will be created automatically
 └── ... (rest of your code)
@@ -111,7 +111,7 @@ Next Steps
 Now you should be able to:
 
 Download your updated credentials.json file from the Google Cloud Console (if you haven't already)
-Place it in your gmail-mover project root
+Place it in your gmover project root
 Run your Gmail Mover tool - it will prompt you to authenticate each account the first time you use it
 When you run the tool with each of your three email accounts, you'll go through the OAuth flow once per account, and the tokens will be saved for future use.
 
@@ -154,7 +154,7 @@ Please mplement these changes.
 Edit
 I'd be happy to implement these changes for you! However, I need to see the current code structure to make the appropriate modifications.
 
-Could you help me access the current codebase? I can see from your project documents that you have a gmail-mover/ directory structure, but I need to examine the actual code files to:
+Could you help me access the current codebase? I can see from your project documents that you have a gmover/ directory structure, but I need to examine the actual code files to:
 
 See the current main() function and how it's calling SetLogger()
 Understand the existing gmover and gmutil package structures

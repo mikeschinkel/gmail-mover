@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mikeschinkel/gmail-mover/cliutil"
-	"github.com/mikeschinkel/gmail-mover/gapi"
-	"github.com/mikeschinkel/gmail-mover/gmcmds"
-	"github.com/mikeschinkel/gmail-mover/gmover"
+	"github.com/mikeschinkel/gmover/cliutil"
+	"github.com/mikeschinkel/gmover/gapi"
+	"github.com/mikeschinkel/gmover/gmcmds"
+	"github.com/mikeschinkel/gmover/gmover"
 
-	_ "github.com/mikeschinkel/gmail-mover/gmcmds"
+	_ "github.com/mikeschinkel/gmover/gmcmds"
 )
 
 // TestCommandSystem tests the command registration and execution system

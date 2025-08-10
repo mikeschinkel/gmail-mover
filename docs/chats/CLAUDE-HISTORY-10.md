@@ -21,7 +21,7 @@ Stores operational metadata using Google Apps Script (see adr-003-gmail-metadata
 Key Implementation Requirements
 1. Command Structure
    Create a new sync subcommand with these flags:
-   gmail-mover sync [flags]
+   gmover sync [flags]
    -account string     Gmail account to sync (required)
    -label string       Gmail label to sync (default: "INBOX")
    -query string       Gmail search query (optional)
@@ -91,8 +91,8 @@ import (
 "time"
 
     "google.golang.org/api/gmail/v1"
-    "github.com/yourorg/gmail-mover/metadata"
-    "github.com/yourorg/gmail-mover/storage"
+    "github.com/yourorg/gmover/metadata"
+    "github.com/yourorg/gmover/storage"
 )
 
 type Syncer struct {
@@ -254,18 +254,18 @@ Initialize a test SQLite database with the schema
 
 Test Command Sequence:
 bash# Initial sync of first 10 messages
-./gmail-mover sync -account test@gmail.com -max 10 -dry-run
+./gmover sync -account test@gmail.com -max 10 -dry-run
 
 # If dry run looks good, do actual sync
-./gmail-mover sync -account test@gmail.com -max 10
+./gmover sync -account test@gmail.com -max 10
 
 # Test incremental sync (should skip already processed)
-./gmail-mover sync -account test@gmail.com -max 20
+./gmover sync -account test@gmail.com -max 20
 
 # Test checkpoint recovery (interrupt with Ctrl+C during sync)
-./gmail-mover sync -account test@gmail.com -max 100
+./gmover sync -account test@gmail.com -max 100
 # Ctrl+C after a few messages
-./gmail-mover sync -account test@gmail.com -max 100  # Should resume
+./gmover sync -account test@gmail.com -max 100  # Should resume
 Implementation Priorities
 
 Phase 1: Basic sync with Apps Script state storage
@@ -343,14 +343,14 @@ Future: Will support PostgreSQL alongside SQLite
 
 Key Design Decisions
 1. Database Configuration Management
-   Implement a configuration system in ~/.config/gmail-mover/ that defines:
+   Implement a configuration system in ~/.config/gmover/ that defines:
 
 Default database configuration
 Named database configurations with connection details
 Database roles (e.g., 'sync', 'oltp'/dashboard)
 
 Example config structure:
-yaml# ~/.config/gmail-mover/databases.yaml
+yaml# ~/.config/gmover/databases.yaml
 default: personal-archive
 
 databases:
@@ -365,14 +365,14 @@ max_size: 1GB
 dashboard:
 type: sqlite
 role: oltp
-path: ~/gmail-mover/dashboard.db
+path: ~/gmover/dashboard.db
 
 production:  # Future PostgreSQL support
 type: postgres
 role: sync
 connection: "host=localhost dbname=gmail_archive"
 2. Sync Command Structure
-   gmail-mover sync [flags]
+   gmover sync [flags]
    -account string     Gmail account to sync (required)
    -db string         Database name from config (default: use default from config)
    -label string      Specific label to sync (optional - default is full account)

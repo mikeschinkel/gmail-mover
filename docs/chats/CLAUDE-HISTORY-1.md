@@ -99,10 +99,10 @@ Each will have its own credentials.json file with different client IDs and secre
 Dynamic Authentication Flow
 Your Go CLI could work like this:
 bash# Move from account1 to account2
-./gmail-mover --source=account1 --dest=account2
+./gmover --source=account1 --dest=account2
 
 # Move from account3 to account2
-./gmail-mover --source=account3 --dest=account2
+./gmover --source=account3 --dest=account2
 The tool would:
 
 Load the appropriate credentials.json based on the --source and --dest flags
@@ -172,7 +172,7 @@ tokens/
 ├── archive@mydomain.com_token.json      # Created by app  
 └── backup@anotherdomain.com_token.json  # Created by app
 Then your CLI could work like:
-bash./gmail-mover --source=john.doe@gmail.com --dest=archive@mydomain.com
+bash./gmover --source=john.doe@gmail.com --dest=archive@mydomain.com
 Does this clarify the division of responsibilities between manual setup and app orchestration?RetryMSManual Creation (You do this once):So a user could not use this tool with only providing email address and agreeing to provide access via OAuth, for every email address they have to go through this highly technical process of manually getting a credentials.json on Google Cloud Console?  That sounds like a horrible UX; are you CERTAIN this is the only way?EditYou're absolutely right - that UX would be terrible! I was describing the traditional OAuth 2.0 flow, but there are better approaches for your use case.
 Better Options for User Experience
 Option 1: Your Own OAuth App (Recommended)
@@ -200,7 +200,7 @@ Download one credentials.json file
 In the OAuth consent screen, you don't need to add specific test users - any Gmail user can authenticate
 
 New File Structure
-gmail-mover/
+gmover/
 ├── main.go
 ├── auth/
 │   └── auth.go
@@ -213,10 +213,10 @@ gmail-mover/
 └── backup@anotherdomain.com_token.json # Auto-generated per user
 CLI Usage (Much Better!)
 bash# First time - will pop up browser auth for each new email
-./gmail-mover --source=john.doe@gmail.com --dest=archive@mydomain.com
+./gmover --source=john.doe@gmail.com --dest=archive@mydomain.com
 
 # Subsequent runs - uses cached tokens
-./gmail-mover --source=john.doe@gmail.com --dest=archive@mydomain.com
+./gmover --source=john.doe@gmail.com --dest=archive@mydomain.com
 How Authentication Works
 
 User runs CLI with email addresses
@@ -231,13 +231,13 @@ Would you like me to help you modify your current auth code to support this sing
 Enhanced CLI with Job Files
 CLI Usage Options
 bash# Direct command line (simple cases)
-./gmail-mover --source=john@gmail.com --source-label=INBOX --dest=archive@domain.com --dest-label=imported
+./gmover --source=john@gmail.com --source-label=INBOX --dest=archive@domain.com --dest-label=imported
 
 # Job file (complex/repeated operations)
-./gmail-mover --job=daily-archive.json
+./gmover --job=daily-archive.json
 
 # List available labels for an account
-./gmail-mover --list-labels=john@gmail.com
+./gmover --list-labels=john@gmail.com
 Job File Format Example
 json{
 "name": "Daily Archive Job",
@@ -258,7 +258,7 @@ json{
 }
 }
 Directory Structure
-gmail-mover/
+gmover/
 ├── main.go
 ├── jobs/
 │   ├── daily-archive.json
@@ -301,9 +301,9 @@ import (
 "log"
 "os"
 
-	"github.com/yourusername/gmail-mover/auth"
-	"github.com/yourusername/gmail-mover/config"
-	"github.com/yourusername/gmail-mover/mover"
+	"github.com/yourusername/gmover/auth"
+	"github.com/yourusername/gmover/config"
+	"github.com/yourusername/gmover/mover"
 )
 
 func main() {
@@ -312,16 +312,16 @@ jobFile          = flag.StSummary
 This design gives you:
 Enhanced CLI Usage
 bash# Direct command line
-./gmail-mover --source=john@gmail.com --source-label=INBOX --dest=archive@domain.com --dest-label=archived
+./gmover --source=john@gmail.com --source-label=INBOX --dest=archive@domain.com --dest-label=archived
 
 # Job files (better for complex/repeated operations)
-./gmail-mover --job=jobs/daily-archive.json
+./gmover --job=jobs/daily-archive.json
 
 # List available labels
-./gmail-mover --list-labels=john@gmail.com
+./gmover --list-labels=john@gmail.com
 
 # Dry run mode
-./gmail-mover --job=jobs/cleanup.json --dry-run
+./gmover --job=jobs/cleanup.json --dry-run
 Key Features
 
 Single OAuth app - users just provide email addresses
@@ -332,7 +332,7 @@ Safety features - dry run mode, continue on error
 Token caching - per-email-address token storage
 
 Directory Structure
-gmail-mover/
+gmover/
 ├── main.go
 ├── auth/auth.go
 ├── mover/mover.go  
@@ -474,7 +474,7 @@ Why they removed/restricted defaults
 The JSON Schema maintainers argued that default was being used inconsistently - some tools used it for validation, others for data generation, others for documentation. They wanted to separate "schema validation" from "data transformation/generation." But yes, it's a terrible developer experience decision.
 How to ask Claude Code to determine if you need defaults
 Ask Claude Code something like:
-"Look at my Go code in the gmail-mover project. When I load job configuration files, do I actually use any default values from the JSON schema? Or do I handle missing values in my Go code instead? Show me specifically where defaults would be applied vs where I handle missing values in code."
+"Look at my Go code in the gmover project. When I load job configuration files, do I actually use any default values from the JSON schema? Or do I handle missing values in my Go code instead? Show me specifically where defaults would be applied vs where I handle missing values in code."
 Quick determination without Claude Code
 Look at your config/job.go file in the LoadJobFile function. If you see code like:
 go// Set defaults

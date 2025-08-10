@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mikeschinkel/gmail-mover/cliutil"
-	"github.com/mikeschinkel/gmail-mover/gmcmds"
+	"github.com/mikeschinkel/gmover/cliutil"
+	"github.com/mikeschinkel/gmover/gmcmds"
 )
 
 // TestOutputCapture tests that our output capture mechanism works

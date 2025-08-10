@@ -496,7 +496,7 @@ var (
 **Note: This is a hypothetical example demonstrating the API usage patterns and not an explicit architectural decision for the final implementation.**
 
 ```go
-// cmd/gmail-mover/main.go
+// cmd/gmover/main.go
 package main
 
 import (
@@ -512,7 +512,7 @@ import (
     script "google.golang.org/api/script/v1"
     "google.golang.org/api/option"
 
-    "github.com/yourorg/gmail-mover/metadata"
+    "github.com/yourorg/gmover/metadata"
 )
 
 // Configuration for metadata storage
@@ -790,7 +790,7 @@ func (c *Client) AtomicUpdate(key, updateFunc string, params map[string]interfac
 ### GCP Project Setup
 1. **Create or select GCP project**:
     - Go to [Google Cloud Console](https://console.cloud.google.com/)
-    - Create a new project or select existing one (e.g., `gmail-mover-project`)
+    - Create a new project or select existing one (e.g., `gmover-project`)
 
 2. **Enable required APIs**:
     - Navigate to "APIs & Services" → "Library"

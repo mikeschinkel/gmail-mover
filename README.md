@@ -30,13 +30,13 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
    - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
    - Choose "Desktop Application" type
    - Download the credentials JSON file
-   - Save it as `~/.config/gmail-mover/credentials.json`
+   - Save it as `~/.config/gmover/credentials.json`
 
 3. **Install Gmail Mover**:
    ```bash
    # Clone and build (ALWAYS build to ./bin/ directory)
    git clone <repository-url>
-   cd gmail-mover
+   cd gmover
    go build -o bin/gmover ./cmd/gmover-cli/
    ```
 
@@ -244,7 +244,7 @@ go version
 
 # Clone repository
 git clone <repository-url>
-cd gmail-mover
+cd gmover
 
 # Install dependencies
 go mod tidy

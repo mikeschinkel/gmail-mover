@@ -1,7 +1,7 @@
 package gmcmds
 
 import (
-	"github.com/mikeschinkel/gmail-mover/cliutil"
+	"github.com/mikeschinkel/gmover/cliutil"
 )
 
 // ListCmd handles listing Gmail resources

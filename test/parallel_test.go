@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mikeschinkel/gmail-mover/cliutil"
-	"github.com/mikeschinkel/gmail-mover/gmcmds"
+	"github.com/mikeschinkel/gmover/cliutil"
+	"github.com/mikeschinkel/gmover/gmcmds"
 )
 
 // TestParallelOutput tests that goroutine isolation works in parallel tests

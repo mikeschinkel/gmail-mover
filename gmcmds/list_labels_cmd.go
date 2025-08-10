@@ -3,8 +3,8 @@ package gmcmds
 import (
 	"context"
 
-	"github.com/mikeschinkel/gmail-mover/cliutil"
-	"github.com/mikeschinkel/gmail-mover/gmover"
+	"github.com/mikeschinkel/gmover/cliutil"
+	"github.com/mikeschinkel/gmover/gmover"
 )
 
 var ListLabelsFlagSet = &cliutil.FlagSet{

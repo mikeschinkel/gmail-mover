@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mikeschinkel/gmail-mover/cliutil"
-	"github.com/mikeschinkel/gmail-mover/gmcmds"
-	"github.com/mikeschinkel/gmail-mover/gmover"
+	"github.com/mikeschinkel/gmover/cliutil"
+	"github.com/mikeschinkel/gmover/gmcmds"
+	"github.com/mikeschinkel/gmover/gmover"
 
 	// Import all commands to trigger their init() functions
-	_ "github.com/mikeschinkel/gmail-mover/gmcmds"
+	_ "github.com/mikeschinkel/gmover/gmcmds"
 )
 
 func main() {

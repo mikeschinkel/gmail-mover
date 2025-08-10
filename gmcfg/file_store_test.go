@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/mikeschinkel/gmail-mover/gmcfg"
+	"github.com/mikeschinkel/gmover/gmcfg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

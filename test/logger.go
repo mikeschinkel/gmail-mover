@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mikeschinkel/gmail-mover/gapi"
-	"github.com/mikeschinkel/gmail-mover/gmcmds"
-	"github.com/mikeschinkel/gmail-mover/gmover"
+	"github.com/mikeschinkel/gmover/gapi"
+	"github.com/mikeschinkel/gmover/gmcmds"
+	"github.com/mikeschinkel/gmover/gmover"
 )
 
 // TestLogger captures log output for testing

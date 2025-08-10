@@ -3,9 +3,9 @@ package gmcmds
 import (
 	"context"
 
-	"github.com/mikeschinkel/gmail-mover/cliutil"
-	"github.com/mikeschinkel/gmail-mover/gmjobs"
-	"github.com/mikeschinkel/gmail-mover/gmover"
+	"github.com/mikeschinkel/gmover/cliutil"
+	"github.com/mikeschinkel/gmover/gmjobs"
+	"github.com/mikeschinkel/gmover/gmover"
 )
 
 var _ cliutil.Command = (*RunJobCmd)(nil)

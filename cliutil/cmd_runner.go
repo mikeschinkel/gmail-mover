@@ -135,7 +135,7 @@ func findBestCmdMatch(args []string) (path string, remainingArgs []string) {
 
 // ShowMainHelp displays the main help screen
 func ShowMainHelp() (err error) {
-	Printf(`Gmail Mover - Move emails between Gmail accounts and labels
+	Printf(`GMover - Move emails between Gmail accounts and labels
 
 USAGE:
     gmover <command> [subcommand] [options]
@@ -170,7 +170,7 @@ EXAMPLES:
     gmover job define daily-archive.json --src=user@example.com --dst=archive@example.com
     gmover job run daily-archive.json --auto-confirm
 
-For more information, visit: https://github.com/mikeschinkel/gmail-mover
+For more information, visit: https://github.com/mikeschinkel/gmover
 `)
 	return err
 }

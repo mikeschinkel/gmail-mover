@@ -137,7 +137,7 @@ Should I create a revised version that combines the best of both approaches?Retr
 ### GCP Project Setup
 1. **Create or select GCP project**:
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing one (e.g., `gmail-mover-project`)
+   - Create a new project or select existing one (e.g., `gmover-project`)
 
 2. **Enable reqADR-002: Google Apps Script for Gmail Mover Metadata StorageDocument ∙ Version 16 ### 1. Google Drive appDataFolder
 **Decision**: Rejected in favor of Apps Script  
