@@ -326,13 +326,14 @@ Manual testing requires:
 - ✅ **Atomic Operations**: Ctrl-C protection for message integrity
 
 ### Current Bugs/TODOs
+`CCALUDE- [ ] Update Schema to handle Gmail plus (+), period (.), and googlemail.com addressing
 - [ ] Fix log level bug in gapi/transfer.go (Error should be Info)
 - [ ] Fix MaxMessages bug in gmover/src_account.go:30 (not being set)
 - [ ] Fix flag logic bug in cmd/main.go listLabels check
 - [ ] Move signal handling from cmd/main.go to gmover.Initialize()
 - [ ] Add comprehensive integration tests for new command system
 - [ ] Consider making MaxMessages part of TransferOpts instead of global variable
-- [ ] **Package Organization Review**: Decide what should be moved into `./internal/` (or moved out of it) and update all references in comments/markdown files - packages to consider: gapi, gmcfg, gmover internals, sqlc generated code, etc.
+- [ ] **Package Organization Review**: Decide what should be moved into `./` (or moved out of it) and update all references in comments/markdown files - packages to consider: gapi, gmcfg, gmover internals, sqlc generated code, etc.
 
 ## Security Notes
 
