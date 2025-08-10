@@ -1,40 +1,25 @@
 {
 	"compilerOptions": {
-		/* Visit https://aka.ms/tsconfig.json to read more about this file */
-
-		/* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+		"@comments": "\t/* Visit https://aka.ms/tsconfig.json to read more about this file */\n\n\t\t/* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */\n\t\t\"target\": \"es2021\",\n\t\t/* Specify a set of bundled library declaration files that describe the target runtime environment. */\n\t\t\"lib\": [\"es2021\"],\n\t\t/* Specify what JSX code is generated. */\n\t\t\"jsx\": \"react-jsx\",\n\n\t\t/* Specify what module code is generated. */\n\t\t\"module\": \"es2022\",\n\t\t/* Specify how TypeScript looks up a file from a given module specifier. */\n\t\t\"moduleResolution\": \"Bundler\",\n\t\t/* Enable importing .json files */\n\t\t\"resolveJsonModule\": true,\n\n\t\t/* Allow JavaScript files to be a part of your program. Use the `checkJS` option to get errors from these files. */\n\t\t\"allowJs\": true,\n\t\t/* Enable error reporting in type-checked JavaScript files. */\n\t\t\"checkJs\": false,\n\n\t\t/* Disable emitting files from a compilation. */\n\t\t\"noEmit\": true,\n\n\t\t/* Ensure that each file can be safely transpiled without relying on other imports. */\n\t\t\"isolatedModules\": true,\n\t\t/* Allow 'import x from y' when a module doesn't have a default export. */\n\t\t\"allowSyntheticDefaultImports\": true,\n\t\t/* Ensure that casing is correct in imports. */\n\t\t\"forceConsistentCasingInFileNames\": true,\n\n\t\t/* Enable all strict type-checking options. */\n\t\t\"strict\": true,\n\n\t\t/* Skip type checking all .d.ts files. */\n\t\t\"skipLibCheck\": true,\n\t\t\"types\": [\n\t\t\t\"./worker-configuration.d.ts\"\n\t\t]\n\t",
 		"target": "es2021",
-		/* Specify a set of bundled library declaration files that describe the target runtime environment. */
 		"lib": ["es2021"],
-		/* Specify what JSX code is generated. */
 		"jsx": "react-jsx",
 
-		/* Specify what module code is generated. */
 		"module": "es2022",
-		/* Specify how TypeScript looks up a file from a given module specifier. */
 		"moduleResolution": "Bundler",
-		/* Enable importing .json files */
 		"resolveJsonModule": true,
 
-		/* Allow JavaScript files to be a part of your program. Use the `checkJS` option to get errors from these files. */
 		"allowJs": true,
-		/* Enable error reporting in type-checked JavaScript files. */
 		"checkJs": false,
 
-		/* Disable emitting files from a compilation. */
 		"noEmit": true,
 
-		/* Ensure that each file can be safely transpiled without relying on other imports. */
 		"isolatedModules": true,
-		/* Allow 'import x from y' when a module doesn't have a default export. */
 		"allowSyntheticDefaultImports": true,
-		/* Ensure that casing is correct in imports. */
 		"forceConsistentCasingInFileNames": true,
 
-		/* Enable all strict type-checking options. */
 		"strict": true,
 
-		/* Skip type checking all .d.ts files. */
 		"skipLibCheck": true,
 		"types": [
 			"./worker-configuration.d.ts"
