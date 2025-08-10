@@ -35,3 +35,8 @@ end:
 func (e EmailAddress) IsZero() bool {
 	return string(e) == ""
 }
+
+// String returns the string representation of the email address
+func (e EmailAddress) String() string {
+	return string(e)
+}

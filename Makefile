@@ -1,13 +1,13 @@
 # Gmail Mover Makefile
 # Provides common development tasks for building, testing, and running Gmail Mover
 
-.PHONY: all build test test-integration clean fmt vet tidy install help run dev deps check
+.PHONY: all symlink build test test-integration clean fmt vet tidy install help run dev deps check
 
 # Default target
 all: build test
 
 # Variables
-BINARY_NAME=gmail-mover
+BINARY_NAME=gmover
 BINARY_PATH=bin/$(BINARY_NAME)
 CMD_PATH=./cmd
 TEST_TIMEOUT=30s
@@ -21,6 +21,12 @@ BOLD=\033[1m
 NC=\033[0m # No Color
 
 ## Build Commands
+
+# Build the main binary
+symlink:
+	@echo "$(BLUE)🔨 Symlinking schema.sql...$(NC)"
+	@ln -sf ./schema.sql  ./sqlcx/schema.sql
+	@echo "$(GREEN)✅ schema.sql symlinked successfully$(NC)"
 
 # Build the main binary
 build:
@@ -157,8 +163,11 @@ dry-run: build
 help:
 	@echo "$(BOLD)Gmail Mover Development Commands$(NC)"
 	@echo ""
+	@echo "$(BOLD)Setup Commands:$(NC)"
+	@echo "  $(BLUE)symlink$(NC)       Symlinks ./schema.sql to inside ./sqlcx"
+	@echo ""
 	@echo "$(BOLD)Build Commands:$(NC)"
-	@echo "  $(BLUE)build$(NC)         Build the gmail-mover binary"
+	@echo "  $(BLUE)build$(NC)         Build the gmover binary"
 	@echo "  $(BLUE)install$(NC)       Install binary to GOPATH/bin"
 	@echo "  $(BLUE)clean$(NC)         Clean build artifacts"
 	@echo ""
