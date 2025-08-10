@@ -1,0 +1,22 @@
+{
+	"name": "gmail-dashboard-worker",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"build": "esbuild src/index.ts --bundle --format=esm --outdir=dist --loader:.png=binary",
+		"deploy": "npm run build && wrangler deploy dist/index.js",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types"
+	},
+	"dependencies": {
+		"jose": "^5.9.2"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"vitest": "~3.2.0",
+		"typescript": "^5.5.2",
+		"wrangler": "^4.28.1"
+	}
+}

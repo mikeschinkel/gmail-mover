@@ -1,7 +1,0 @@
-https://x.com/mikeschinkel/status/1953905916069167553
-
-Day 2 for building my Gmail-related startup in public. Still not really sure what will resonate with people, so I'll just link my GitHub repo URL:
-
-https://github.com/mikeschinkel/gmover
-
-This started as a "scratch my own itch" kind of project so the description and README have not exactly kept up with my evolving vision. But I'll certainly get to that at some point soon.
