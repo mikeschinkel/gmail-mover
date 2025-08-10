@@ -1,5 +1,8 @@
 # Gmail Mover - Competitive Analysis
 
+## TODO
+Add SaneBox - see https://youtu.be/JPzEIKE7Irk?si=uMK6iu1SlJo8-qxS
+
 ## Executive Summary
 
 The email management market is saturated with tools that force users into proprietary ecosystems, creating vendor lock-in through workflow dependencies and data silos. Gmail Mover's unique positioning as an "augmentation" platform with user-owned SQLite data addresses the core weakness shared by all major competitors.
