@@ -123,23 +123,21 @@ For complex or repeated operations, use JSON job files:
 
 ```json
 {
-  "name": "Weekly Newsletter Archive",
-  "src_account": {
-    "email": "personal@gmail.com",
-    "labels": ["INBOX"],
-    "query": "from:newsletter older_than:7d",
-    "max_messages": 1000
-  },
-  "dst_account": {
-    "email": "archive@gmail.com",
-    "apply_label": "newsletters-archived",
-    "create_label_if_missing": true
-  },
-  "options": {
-    "dry_run": false,
-    "delete_after_move": true,
-    "fail_on_error": false
-  }
+   "version":  "1.0",
+   "job_type": "move_emails",
+   "name": "Weekly Newsletter Archive",
+   "spec":     {
+      "src_email":         "personal@gmail.com",
+      "src_labels":        [
+         "INBOX"
+      ],
+      "dst_email":         "archive@gmail.com",
+      "dst_labels":        [
+         "[Archive]/INBOX/personal@gmail.com",
+         "[Archive]/Tags/newsletters"
+      ],
+      "create_label_if_missing": true
+   }
 }
 ```
 
