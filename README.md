@@ -9,6 +9,8 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
 - **Date Preservation**: Original email dates are preserved in Gmail interface, not transfer date
 - **Multi-Account Support**: Transfer messages between different Gmail accounts
 - **Command System**: Extensible command pattern with guided OAuth setup and token management
+- **Job Configuration**: JSON-based job files for complex or repeated operations
+- **Gmail Sync**: SQLite database archiving for comprehensive email management
 - **Terminal Handling**: Raw mode input with graceful fallbacks for IDE consoles
 - **Advanced Filtering**: Use Gmail's query syntax, labels, and date ranges
 - **Dry-Run Mode**: Preview what will be moved before making changes
@@ -30,13 +32,14 @@ A fast, reliable command-line tool for transferring Gmail messages between accou
    - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
    - Choose "Desktop Application" type
    - Download the credentials JSON file
-   - Save it as `~/.config/gmover/credentials.json`
+   - The application will guide you through credential setup on first use
 
 3. **Install Gmail Mover**:
    ```bash
    # Clone and build (ALWAYS build to ./bin/ directory)
    git clone <repository-url>
    cd gmover
+   go mod tidy
    go build -o bin/gmover ./cmd/gmover-cli/
    ```
 
@@ -52,19 +55,30 @@ On first use, you'll be guided through the OAuth setup automatically when you tr
 
 **List available labels for an account:**
 ```bash
-./bin/gmover list --src=your-email@gmail.com
+./bin/gmover list labels --src=your-email@gmail.com
 ```
 
 **Interactive transfer with approval (recommended):**
 ```bash
-./bin/gmover move -src=source@gmail.com -dst=destination@gmail.com \
-  -src-label=INBOX -query="from:newsletter" -max=50 -dry-run
+./bin/gmover move \
+   --src=source@gmail.com \
+   --dst=destination@gmail.com \
+   --src-label=INBOX \
+   --dst-label=newsletters \
+   --search="from:newsletter" \
+   --max=50 
 ```
 
 **Transfer with automatic approval:**
 ```bash
-./bin/gmover move -src=source@gmail.com -dst=destination@gmail.com \
-  -src-label=INBOX -query="from:newsletter" -max=50 --auto-approve
+./bin/gmover move \
+   --src=source@gmail.com \
+   --dst=destination@gmail.com \
+   --src-label=INBOX \
+   --dst-label=newsletters \
+   --search="from:newsletter" \
+   --max=50 \
+   --auto-confirm
 ```
 
 ## Command-Line Options
@@ -75,46 +89,68 @@ Gmail Mover uses a command-based interface:
 | Command | Usage | Description |
 |---------|-------|-------------|
 | **help** | `./bin/gmover` or `./bin/gmover help` | Shows usage information and examples |
-| **list** | `./bin/gmover list --src=EMAIL` | Lists available labels for the specified account |
-| **move** | `./bin/gmover move -src=EMAIL -dst=EMAIL` | Interactive email transfer with approval |
-| **job** | `./bin/gmover job define` or `./bin/gmover job run` | Create or execute job files |
+| **list labels** | `./bin/gmover list labels --src=EMAIL` | Lists available labels for the specified account |
+| **move** | `./bin/gmover move --src=EMAIL --dst=EMAIL` | Interactive email transfer with approval |
+| **job run** | `./bin/gmover job run FILE` | Execute a job file |
+| **job define move** | `./bin/gmover job define move FILE --src=EMAIL --dst=EMAIL` | Create an email move job file |
+| **sync** | `./bin/gmover sync --account=EMAIL` | Synchronize Gmail account to local SQLite database |
 
-### Common Options
+### Command Line Options
 
+### Global Flags
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--auto-approve` | Skip interactive approval (approve all) | `false` |
-| `-src` | Source Gmail address | *required for most operations* |
-| `-dst` | Destination Gmail address | *required for moves* |  
-| `-src-label` | Source Gmail label to process | `INBOX` |
-| `-dst-label` | Label to apply to moved messages | *(none)* |
-| `-query` | Gmail search query | *(none)* |
-| `-max` | Maximum messages to process | `10000` |
-| `-dry-run` | Preview mode - don't actually move | `false` |
-| `-delete` | Delete from source after move | `false` |
-| `-job` | Load settings from JSON job file | *(none)* |
+| `--auto-confirm` | Skip interactive confirmation prompts | `false` |
+| `--dry-run` | Show what would happen without executing | `false` |
+
+### Command-Specific Flags
+
+**move command:**
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--src` | Source Gmail address | *required* |
+| `--dst` | Destination Gmail address | *required* |
+| `--src-label` | Source Gmail label to process | `INBOX` |
+| `--dst-label` | Label to apply to moved messages | *required* |
+| `--search` | Gmail search query | *(none)* |
+| `--max` | Maximum messages to process | `10000` |
+| `--delete` | Delete from source after move | `true` |
+
+**list labels command:**
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--src` | Source Gmail address | *required* |
+
+**sync command:**
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--account` | Gmail account to sync | *required* |
+| `--db` | Database name from config | *(default config)* |
+| `--label` | Specific Gmail label to sync | *(full account)* |
+| `--query` | Gmail search query to filter sync | *(none)* |
+| `--force` | Force full resync, ignoring previous state | `false` |
 
 ## Advanced Usage
 
 ### Gmail Query Examples
 
-The `-query` flag supports Gmail's full search syntax:
+The `--search` flag supports Gmail's full search syntax:
 
 ```bash
 # Messages from specific sender
--query="from:noreply@example.com"
+--search="from:noreply@example.com"
 
 # Messages with attachments
--query="has:attachment"
+--search="has:attachment"
 
 # Messages in date range
--query="after:2023/1/1 before:2023/12/31"
+--search="after:2023/1/1 before:2023/12/31"
 
 # Unread messages
--query="is:unread"
+--search="is:unread"
 
 # Complex queries
--query="from:newsletter has:attachment -is:important"
+--search="from:newsletter has:attachment -is:important"
 ```
 
 ### Job Configuration Files
@@ -141,7 +177,20 @@ For complex or repeated operations, use JSON job files:
 }
 ```
 
-Run with: `./bin/gmover job run newsletter-archive.json`
+Create with: 
+```
+./bin/gmover job define move newsletter-archive.json \
+   --src=personal@gmail.com \
+   --dst=archive@gmail.com \
+   --src-label=INBOX \
+   --dst-label=newsletters-archived \
+   --search="from:newsletter older_than:7d" \
+   --max=1000`
+```
+Run with: 
+```
+./bin/gmover job run newsletter-archive.json
+```
 
 ## Authentication
 
@@ -180,20 +229,51 @@ Tokens are automatically saved in `~/.config/gmover/tokens/` for future use with
 
 **Archive old emails with interactive approval:**
 ```bash
-./bin/gmover move -src=main@gmail.com -dst=archive@gmail.com \
-  -query="older_than:1y" -dst-label="archived-2023" -dry-run
+./bin/gmover move \
+   --src=main@gmail.com \
+   --dst=archive@gmail.com \
+   --src-label=INBOX \
+   --dst-label="archived-2023" \
+   --search="older_than:1y"
 ```
 
 **Organize newsletters automatically:**
 ```bash
-./bin/gmover move -src=personal@gmail.com -dst=personal@gmail.com \
-  -query="from:newsletter" -dst-label="Newsletters" -delete=false --auto-approve
+./bin/gmover move \
+   --src=personal@gmail.com \
+   --dst=personal@gmail.com \
+  --src-label=INBOX \
+  --dst-label="Newsletters" \
+  --search="from:newsletter" \
+  --delete=false \
+  --auto-confirm
 ```
 
 **Backup important emails with approval:**
 ```bash
-./bin/gmover move -src=work@company.com -dst=personal@gmail.com \
-  -query="is:important" -dst-label="work-backup" -dry-run
+./bin/gmover move \
+	--src=work@company.com \
+	--dst=personal@gmail.com \
+	--src-label=INBOX \
+	--dst-label="work-backup" \
+	--search="is:important" 
+```
+
+**Sync Gmail account to SQLite database:**
+NOTE: _NOT YET IMPLEMENTED_
+```bash
+./bin/gmover sync \
+	--account=personal@gmail.com
+```
+
+**Sync specific label with filtering:**
+NOTE: _NOT YET IMPLEMENTED_
+```bash
+./bin/gmover sync \
+	--account=work@company.com \
+	--label=INBOX \
+  	--query="is:important" \
+	--force
 ```
 
 **Interactive Approval Responses:**
@@ -202,6 +282,7 @@ Tokens are automatically saved in `~/.config/gmover/tokens/` for future use with
 - `a` - Yes to all remaining messages
 - `d` - Delay 3 seconds between messages
 - `c` - Cancel operation
+- `Ctrl-C` - Cancel operation
 
 ## Troubleshooting
 
@@ -254,7 +335,12 @@ go build -o bin/gmover ./cmd/gmover-cli/
 go test ./test/ -v
 
 # Test with dry-run
-./bin/gmover move -src=test@gmail.com -dst=test@gmail.com -dry-run
+./bin/gmover move \
+   --src=test@gmail.com \
+   --dst=test@gmail.com \
+   --src-label=INBOX \
+   --dst-label=test \
+   --dry-run
 ```
 
 ## Support
