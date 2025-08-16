@@ -1,6 +1,87 @@
 # My Building in Public Tweets
 
 
+## [Day 9]()
+
+```
+Day 9 — Your email should be yours
+
+#gmover's plans to archive your gmail to an optimized SQLite database file. 
+
+Not PST, not even JSON, CSV, or some other proprietary format. SQLite means universal access, true ownership, query with any SQL tool. 
+
+Using #gmail should not lock you in.
+```
+![](./images/day-9-screenshot.png)
+
+## [Day 8](https://x.com/mikeschinkel/status/1956096923615813699)
+
+```
+Day 8 — So hard to avoid Yak Shaving 
+
+I should be working on #gmover for #gmail, but after constantly correcting Claude I decided to write an MCP Server and an LLM Proxy to gain more control. This has been a day's long rabbit hole.
+
+Am I the only founder who does this? 😩
+
+```
+![](./images/day-8-screenshot.jpeg)
+
+
+## [Day 7](https://x.com/mikeschinkel/status/1955839413331878216)
+
+```
+Day 7 — Do you Backup or Archive your Gmail?
+
+Please elaborate, especially if you use a 3rd party tool.
+[_] I don't, but I should
+[_] Who keeps old emails?!?
+[_] I use Google Takeout
+[_] I use a 3rd party tool
+
+#gmover #gmail
+```
+
+
+## [Day 6](https://x.com/mikeschinkel/status/1955472309919056236)
+
+```
+Day 6 — Gmail API has no email date sort option.
+
+If your code assumes any order, you have a bug.
+
+It works until it doesn't. Then as luck would have it your code will likely do something destructive. And unrecoverable.
+
+Just one more thing I learned writing #gmover for #gmail.
+```
+![](./images/day-6-screenshot.png)
+
+
+## [Day 5](https://x.com/mikeschinkel/status/1954990158820020629)
+
+```
+Day 5 — My first OOPS!
+
+Moved 10k emails between Gmail accounts. They all showed today's date! 😱
+
+Turns out Gmail needs InternalDateSource set or it ignores original dates.
+
+Had to re-run everything, but got it right this time. Screenshot shows the fix.
+
+#gmover #gmail
+```
+![](./images/day-5-screenshot.png)
+
+## [Day 4](https://x.com/mikeschinkel/status/1954700144764498311)
+
+```
+Day 4 — Moving Gmails Between Accounts
+
+My first use-case was to "archive" all my overflowing INBOXes to a new account to clean up but loose any emails. #gmover #gmail 
+
+GMover can run "jobs" in JSON format, and here is what a job looks like:
+```
+![](./images/day-4-screenshot.png)
+
 ## [Day 3](https://x.com/mikeschinkel/status/1954318832052375798)
 
 ```
