@@ -1,8 +1,5 @@
 # Gmail Mover - Competitive Analysis
 
-## TODO
-Add SaneBox - see https://youtu.be/JPzEIKE7Irk?si=uMK6iu1SlJo8-qxS
-
 ## Executive Summary
 
 The email management market is saturated with tools that force users into proprietary ecosystems, creating vendor lock-in through workflow dependencies and data silos. Gmail Mover's unique positioning as an "augmentation" platform with user-owned SQLite data addresses the core weakness shared by all major competitors.
@@ -89,6 +86,31 @@ The email management market is saturated with tools that force users into propri
 - Smart inbox rules not transferable
 
 **Lock-in Level:** MEDIUM-HIGH - AI categorization and team workflows create dependencies
+
+---
+
+### SaneBox
+**Price:** $3.49-$16.99/month (Snack/Lunch/Dinner plans)
+**Target:** Busy professionals overwhelmed by email volume
+
+**Strengths:**
+- Works with any email client (Gmail, Outlook, Apple Mail, Yahoo) without replacing them
+- AI-powered automatic email sorting into folders like "SaneLater" for less important emails
+- No app download required - works in the background with existing email
+- Simple drag-and-drop training to improve AI accuracy
+- Features like SaneBlackHole (permanent unsubscribe), SaneReminders (follow-up alerts), and Daily Digest
+
+**Weaknesses:**
+- Takes time to learn user patterns and isn't always perfect initially
+- Limited to email filtering/organization - no advanced analytics or dashboard views
+- Learning curve for new users to understand all features and settings
+- No data export or rule portability
+- AI classification rules remain black-box to users
+
+**Lock-in Level:** MEDIUM - Users become dependent on AI classification and folder system
+
+#### On YouTube
+- https://youtu.be/JPzEIKE7Irk?si=uMK6iu1SlJo8-qxS
 
 ---
 
