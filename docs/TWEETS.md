@@ -2,6 +2,21 @@
 
 
 ## [Day 9]()
+## [Day 10](https://x.com/mikeschinkel/status/1956911978997264446)
+
+```
+Day 10 — So no to clever database designs
+
+Since #Gmover plans to sync and archive #gmail to Sqlite, we need a long-lived schema to hold 10+ years but still optimized for search.  
+
+I considered creative primary keys to avoid joins, but experience told me no.
+
+Integer Keys FTW!
+```
+![](./images/day-10-screenshot.png)
+
+
+## [Day 9](https://x.com/mikeschinkel/status/1956520014527279301)
 
 ```
 Day 9 — Your email should be yours
