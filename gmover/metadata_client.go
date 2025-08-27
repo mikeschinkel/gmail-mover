@@ -45,7 +45,7 @@ func NewMetadataClient() *MetadataClient {
 }
 
 // GetAccountSyncState retrieves sync state for a Gmail account
-func (c *MetadataClient) GetAccountSyncState(ctx context.Context, account string) (state AccountSyncState, err error) {
+func (c *MetadataClient) GetAccountSyncState(_ context.Context, account string) (state AccountSyncState, err error) {
 	// TODO: Implement actual Apps Script API call per ADR-006
 	// For now, return empty state as stub
 
@@ -64,7 +64,7 @@ func (c *MetadataClient) GetAccountSyncState(ctx context.Context, account string
 }
 
 // SaveAccountSyncState saves sync state for a Gmail account
-func (c *MetadataClient) SaveAccountSyncState(ctx context.Context, state AccountSyncState) (err error) {
+func (c *MetadataClient) SaveAccountSyncState(_ context.Context, state AccountSyncState) (err error) {
 	// TODO: Implement actual Apps Script API call per ADR-006
 
 	// Validate state before saving
