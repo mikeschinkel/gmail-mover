@@ -1,8 +1,7 @@
 
 # Build artifacts
-gmover
-gmover.exe
-bin/
+bin/gmover.exe
+bin/gmover
 
 # Go build cache and modules
 go.sum

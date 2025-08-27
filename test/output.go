@@ -18,8 +18,8 @@ type TestOutput struct {
 // InitTestOutput creates a test output writer
 func InitTestOutput() *TestOutput {
 	output := &TestOutput{}
-	cliutil.SetOutput(output)
-	gapi.SetOutput(output)
+	cliutil.SetWriter(output)
+	gapi.SetWriter(output)
 	return output
 }
 

@@ -12,7 +12,7 @@ const (
 	TokenFileTemplate   = "tokens/token-%s.json"
 )
 
-func (api *GMailAPI) getTokenFromWeb(config *oauth2.Config) (token *oauth2.Token, err error) {
+func (api *GMailAPI) getTokenFromWeb(account EmailAddress, config *oauth2.Config) (token *oauth2.Token, err error) {
 	var authURL string
 	var authCode string
 
@@ -22,8 +22,8 @@ func (api *GMailAPI) getTokenFromWeb(config *oauth2.Config) (token *oauth2.Token
 	authURL = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 
 	ensureOutput()
-	output.Printf("Go to the following link in your browser: \n%v\n", authURL)
-	output.Printf("Enter the authorization code: ")
+	writer.Printf("Go to the following link in your browser: \n%v\n", authURL)
+	writer.Printf("Enter the authorization code for %s: ", account)
 
 	_, err = fmt.Scan(&authCode)
 	if err != nil {

@@ -2,6 +2,8 @@ package gmcmds
 
 import (
 	"log/slog"
+
+	"github.com/mikeschinkel/gmover/logutil"
 )
 
 var logger *slog.Logger
@@ -14,6 +16,13 @@ func SetLogger(l *slog.Logger) {
 // ensureLogger panics if logger is not set
 func ensureLogger() {
 	if logger == nil {
-		panic("Must set logger with gmover.SetLogger() before using gmover package")
+		panic("Must set logger with gmcmds.SetLogger() before using gmcmds package")
 	}
+}
+
+func init() {
+	logutil.RegisterInitializerFunc(func(args logutil.InitializerArgs) error {
+		SetLogger(args.Logger)
+		return nil
+	})
 }

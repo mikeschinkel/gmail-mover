@@ -14,7 +14,7 @@ import (
 
 type EmailAddress string
 
-// OutputWriter defines the interface for user-facing output
+// OutputWriter defines the interface for user-facing writer
 type OutputWriter interface {
 	Printf(format string, args ...interface{})
 	Errorf(format string, args ...interface{})
@@ -26,7 +26,7 @@ type GMailAPI struct {
 	fileStore    FileStorer
 }
 
-// NewGMailAPI creates a new GMailAPI instance with file store and output writer
+// NewGMailAPI creates a new GMailAPI instance with file store and writer writer
 func NewGMailAPI(appConfigDir string, fileStore FileStorer) *GMailAPI {
 	return &GMailAPI{
 		appConfigDir: appConfigDir,
@@ -73,15 +73,15 @@ func (api *GMailAPI) setupCredentials() (err error) {
 	var credentialsJSON string
 	var credentialsRaw json.RawMessage
 
-	output.Printf("Gmail Mover requires OAuth2 credentials to access Gmail.\n")
-	output.Printf("Please follow these steps:\n")
-	output.Printf("1. Go to https://console.cloud.google.com/\n")
-	output.Printf("2. Create a new project or select an existing one\n")
-	output.Printf("3. Enable the Gmail API\n")
-	output.Printf("4. Create OAuth 2.0 Client ID credentials (Desktop Application)\n")
-	output.Printf("5. Download the credentials JSON file\n")
-	output.Printf("\n")
-	output.Printf("Paste the contents of your credentials JSON file here and press Enter: ")
+	writer.Printf("Gmail Mover requires OAuth2 credentials to access Gmail.\n")
+	writer.Printf("Please follow these steps:\n")
+	writer.Printf("1. Go to https://console.cloud.google.com/\n")
+	writer.Printf("2. Create a new project or select an existing one\n")
+	writer.Printf("3. Enable the Gmail API\n")
+	writer.Printf("4. Create OAuth 2.0 Client ID credentials (Desktop Application)\n")
+	writer.Printf("5. Download the credentials JSON file\n")
+	writer.Printf("\n")
+	writer.Printf("Paste the contents of your credentials JSON file here and press Enter: ")
 
 	_, err = fmt.Scanln(&credentialsJSON)
 	if err != nil {
@@ -104,7 +104,7 @@ func (api *GMailAPI) setupCredentials() (err error) {
 		goto end
 	}
 
-	output.Printf("Credentials saved successfully!\n")
+	writer.Printf("Credentials saved successfully!\n")
 
 end:
 	return err
@@ -145,7 +145,7 @@ func (api *GMailAPI) getToken(config *oauth2.Config, email EmailAddress) (token 
 
 	logger.Info("Requesting access token", "email_address", email)
 	// Get new token via OAuth flow
-	token, err = api.getTokenFromWeb(config)
+	token, err = api.getTokenFromWeb(email, config)
 	if err != nil {
 		goto end
 	}

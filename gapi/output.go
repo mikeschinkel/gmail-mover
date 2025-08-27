@@ -4,16 +4,16 @@ import (
 	"log"
 )
 
-var output OutputWriter
+var writer OutputWriter
 
-func GetOutput() OutputWriter {
-	return output
+func GetWriter() OutputWriter {
+	return writer
 }
-func SetOutput(writer OutputWriter) {
-	output = writer
+func SetWriter(w OutputWriter) {
+	writer = w
 }
 func ensureOutput() {
-	if output == nil {
+	if writer == nil {
 		log.Fatal("OutputWriter is not set; call cliutil.SetOutputWriter() first.")
 	}
 }

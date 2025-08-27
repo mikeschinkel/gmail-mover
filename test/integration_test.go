@@ -23,7 +23,7 @@ func TestCommandSystem(t *testing.T) {
 	// Test help (no arguments shows help)
 	t.Run("HelpCommand", func(t *testing.T) {
 		output := InitTestOutput()
-		cliutil.SetOutput(output)
+		cliutil.SetWriter(output)
 		defer output.ClearOutput()
 
 		runner := cliutil.NewCmdRunner(cliutil.CmdRunnerArgs{
