@@ -1,7 +1,81 @@
 # My Building in Public Tweets
 
 
-## [Day 9]()
+## [Day 15](https://x.com/mikeschinkel/status/1959076233297240280)
+
+``` 
+Day 15 — Elder Fraud is REAL! 😡
+
+No heart to tweet about #gmover today.
+
+My 86 yr old dad lost $50k in 2 days to a deep fake of me "in jail" and "lawyer" who scammed him for all he's worth.
+
+WARN YOUR PARENTS; SHARE WIDELY!
+
+Explained: https://www.youtube.com/watch?v=PUmajOogkhs
+
+#buildinpublic
+
+```
+![](./images/day-15-screenshot.png)
+
+
+## [Day 14](https://x.com/mikeschinkel/status/1958726444835906012)
+
+```
+Day 14 — Architecture Decisions Records 
+
+ADRs are a great way to not forget why you made a technical decision.
+
+Teams in my past rarely had the discipline to write them, but as a solo founder I can decide to. 
+
+Now with AI though, I look forward to writing them!
+
+#buildinpublic
+
+```
+![](./images/day-14-screenshot.png)
+
+
+## [Day 13](https://x.com/mikeschinkel/status/1958338020043850023)
+
+```
+Day 13 — Customer Discovery Insights
+
+Interviewed a heavy Gmail User today. He is a Merlin Mann "Inbox Zero" disciple. Biggest pain is spam and cold emails. Also, worried that Google holds the keys to all his email and might deny access someday. 
+
+#GMover will definitely solve the latter. And maybe also the former.
+```
+![](./images/day-13-screenshot.png)
+
+
+
+## [Day 12](https://x.com/mikeschinkel/status/1957996769557569580)
+
+```
+Day 12 — Minimal storage, searchable, no loss
+
+I plan for #gmover to compress the full RFC 5322 message AND store a searchable body.
+
+Raw preserves everything. Searchable strips HTML, signatures, and quoted text which is great for AI.
+
+Complete fidelity AND fast search. #gmail
+
+```
+
+
+## [Day 11](https://x.com/mikeschinkel/status/1957268264171491538)
+
+```
+Day 11 — How to store 10+ years of email?
+
+I want #gmover to archive a decade of your #gmail, but that's HUGE disk space. So I'm leaning heavily into normalization.
+
+No repeatedly storing long email addresses and domains. Break them apart, reference by ID. Storage size matters.
+```
+![](./images/day-11-screenshot.png)
+
+
 ## [Day 10](https://x.com/mikeschinkel/status/1956911978997264446)
 
 ```
@@ -106,9 +180,6 @@ Mac Mail stopped displaying my emails. Was it the 30k emails in my INBOX between
 
 But I realized Gmover could be so much more. Follow me to hear what nore, and to track my progress. 
 ```
-
-
-
 
 ## [Day 2](https://x.com/mikeschinkel/status/1953905916069167553)
 ```
